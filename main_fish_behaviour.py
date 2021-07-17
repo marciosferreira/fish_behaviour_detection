@@ -1,5 +1,4 @@
 quadr = 'B'
-print("teste")
 import cv2
 import numpy as np
 import math
