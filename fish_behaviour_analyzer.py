@@ -1,4 +1,4 @@
-#fish script
+#fish scriptx
 quadr = 'B'
 
 import cv2
