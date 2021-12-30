@@ -15,7 +15,7 @@ fish_1_history = []
 
 counter_activation = 1 
 first = True
-
+hggg = "lll"
 went_ok = 0
 pd.set_option('display.max_columns', None)  
 
