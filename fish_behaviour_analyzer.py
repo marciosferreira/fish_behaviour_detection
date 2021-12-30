@@ -1,5 +1,4 @@
 quadr = 'B'
-
 import cv2
 import numpy as np
 import math
@@ -41,10 +40,13 @@ if (cap.isOpened()== False):
 
 # Read until video is completed
 for i in range(3850,6000):   #3000 to 4000
-
+  if i == 3850:
+    is_first = True
+  else:
+    is_first = False
 
   cap.set(1, i)
-  print(i)
+  
   # Capture frame-by-frame
   ret, frame = cap.read()
   if ret == True:
@@ -167,7 +169,7 @@ for i in range(3850,6000):   #3000 to 4000
 
 
 
-          #store variables locally in the loop for imediate calculation purposes
+          #store variables locally in the loop for immediate calculation purposes
           idx_local.append(counter)          
           lenght_of_fish_local.append(fish_pectoral_lenght)
           position_fish_local.append((aver_cm[0][0], aver_cm[0][1]))
@@ -176,6 +178,8 @@ for i in range(3850,6000):   #3000 to 4000
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
           #fish_color.append(color)
+          if is_first:
+            pass
 
 
           counter +=1
@@ -198,6 +202,8 @@ for i in range(3850,6000):   #3000 to 4000
       print(previous_df)
       #previous_df['fish_id'] = range(1, 1+len(previous_df))
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
+      
+     
     
   
     unique_quadrants = dframe.quadrant_local.unique()
@@ -233,7 +239,7 @@ for i in range(3850,6000):   #3000 to 4000
           distances_indices = [] 
           current_position_fish_local = row['position_fish_local']          
                       
-
+          # here we decide which fish is which
           if update_counter == 90 or update_counter == 91:
 
             previous_fish_1 = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q].iloc[0]   
@@ -272,6 +278,8 @@ for i in range(3850,6000):   #3000 to 4000
           distances_indices.append(distance_value_1)
           distance_value_2 = math.sqrt(   (previous_fish_2_position[0]-current_position_fish_local[0])**2 + (previous_fish_2_position[1]-current_position_fish_local[1])**2    )
           
+          
+          #let's decide which fish is which based on last position
           distances_indices.append(distance_value_2)
           distances_indices.append(distance_value_1)              
                   
@@ -286,7 +294,7 @@ for i in range(3850,6000):   #3000 to 4000
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 90 + row['fish_area'])/91
            
-
+    print(dframe)
           
     update_counter += 1
     if update_counter > 100:
