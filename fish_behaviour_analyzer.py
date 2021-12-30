@@ -4,7 +4,7 @@ import numpy as np
 import math
 import pandas as pd
 import time
-
+vvvv = 0
 quad_D = 1
 quad_D_count = 0
 update_counter = 92
@@ -15,7 +15,6 @@ fish_1_history = []
 
 counter_activation = 1 
 first = True
-hggg = "lll"
 went_ok = 0
 pd.set_option('display.max_columns', None)  
 
