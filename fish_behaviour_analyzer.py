@@ -4,11 +4,10 @@ import numpy as np
 import math
 import pandas as pd
 import time
-vvvv = 0
 quad_D = 1
 quad_D_count = 0
 update_counter = 92
-
+import matplotlib.pyplot as plt 
 
 fish_0_history = []
 fish_1_history = []
@@ -38,13 +37,9 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for i in range(3850,6000):   #3000 to 4000
-  if i == 3850:
-    is_first = True
-  else:
-    is_first = False
-
-  cap.set(1, i)
+for idx_frame in range(3850,6000):   #3000 to 4000
+  
+  cap.set(1, idx_frame)
   
   # Capture frame-by-frame
   ret, frame = cap.read()
@@ -177,10 +172,70 @@ for i in range(3850,6000):   #3000 to 4000
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
           #fish_color.append(color)
-          if is_first:
-            pass
+          #########################################################################################################
+          if idx_frame == 3900 and idx == 0:
+                      
+            image = frame 
+            mask = np.zeros(image.shape, dtype=np.uint8)
+            mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)
+            
+            kernel = np.ones((5,5), np.uint8)
+            eroded_mask = cv2.erode(mask, kernel, iterations=1)
+                        
+            result1 = cv2.bitwise_and(image, eroded_mask)            
+            img1_grey = cv2.cvtColor(result1, cv2.COLOR_BGR2GRAY)
+            
+            image_enhanced = cv2.equalizeHist(img1_grey)
+            img1_grey = cv2.bilateralFilter(image_enhanced, 9, 100, 50)
+            
+            img1_grey = cv2.rotate(img1_grey, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                     
+         
+          elif idx_frame > 3900: # and idx == 0: #print("else")
+            image = frame 
+            mask = np.zeros(image.shape, dtype=np.uint8)
+            mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)
+            
+            kernel = np.ones((5,5), np.uint8)
+            eroded_mask = cv2.erode(mask, kernel, iterations=1)            
+            
+            result2 = cv2.bitwise_and(image, eroded_mask)
+            img2_grey = cv2.cvtColor(result2, cv2.COLOR_BGR2GRAY)
+            
+            image_enhanced = cv2.equalizeHist(img2_grey)
+            img2_grey = cv2.bilateralFilter(image_enhanced, 9, 100, 50)
+            
+            cv2.imshow('image1', img1_grey)
+            cv2.imshow('image2', img2_grey)
+            
+            # Initiate ORB detector
+            orb = cv2.ORB_create()
+            # find the keypoints and descriptors with ORB
+            kp1, des1 = orb.detectAndCompute(img1_grey,None)
+            kp2, des2 = orb.detectAndCompute(img2_grey,None)
+            
+            # create BFMatcher object
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            
+            print(des1)
+            print(des2)
 
-
+            # Match descriptors.
+            
+            matches = bf.match(des1,des2)
+            # Sort them in the order of their distance.
+            matches = sorted(matches, key = lambda x:x.distance)
+            total = []
+            for m in matches:
+              print(m.distance)
+              total.append(m.distance)
+            print("soma")
+            print(sum(total))
+            print('\n')
+            # Draw first 10 matches.
+            img3 = cv2.drawMatches(img1_grey,kp1,img2_grey,kp2,matches[:10],None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+            plt.imshow(img3), plt.show()                   
+          
           counter +=1
 
     
@@ -198,7 +253,7 @@ for i in range(3850,6000):   #3000 to 4000
       
       previous_df = dframe.copy()
 
-      print(previous_df)
+      #print(previous_df)
       #previous_df['fish_id'] = range(1, 1+len(previous_df))
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
       
@@ -211,7 +266,7 @@ for i in range(3850,6000):   #3000 to 4000
 
       if row_q == quadr:
 
-        print(update_counter)    
+        #print(update_counter)    
 
         if fish_per_quadrant < 2:        
           update_counter = 0
@@ -293,8 +348,7 @@ for i in range(3850,6000):   #3000 to 4000
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 90 + row['fish_area'])/91
            
-    print(dframe)
-          
+        
     update_counter += 1
     if update_counter > 100:
       update_counter = 100
@@ -361,4 +415,6 @@ for i in range(3850,6000):   #3000 to 4000
 cap.release()
 
 # Closes all the frames
-cv2.destroy
+#cv2.destroy
+
+
