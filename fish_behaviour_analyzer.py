@@ -304,63 +304,66 @@ for idx_frame in range(3850,6000):   #3000 to 4000
             hsv_test2 = cv2.cvtColor(images_last_seen[previous_fish_2.iloc[0]], cv2.COLOR_BGR2HSV)
 
             
-            h_bins = 50
-            s_bins = 60
-            histSize = [h_bins, s_bins]
-            # hue varies from 0 to 179, saturation from 0 to 255
-            h_ranges = [0, 180]
-            s_ranges = [0, 256]
-            ranges = h_ranges + s_ranges # concat lists
-            # Use the 0-th and 1-st channels
-            channels = [0, 2]
-            
-            hist_base = cv2.calcHist([hsv_base], channels, None, histSize, ranges, accumulate=False)            
-            cv2.normalize(hist_base, hist_base, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-            
-            hist_test1 = cv2.calcHist([hsv_test1], channels, None, histSize, ranges, accumulate=False)
-            cv2.normalize(hist_test1, hist_test1, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-            hist_test2 = cv2.calcHist([hsv_test2], channels, None, histSize, ranges, accumulate=False)
-            cv2.normalize(hist_test2, hist_test2, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-                        
-            similarity_1 = cv2.compareHist(hist_base[1:15], hist_test1[1:15], 1)
-            similarity_2 = cv2.compareHist(hist_base[1:15], hist_test2[1:15], 1)
-
-            print(similarity_1)
-            print(similarity_2)
-            
-            cv2.imshow("hist", images[row['original_index']])
+            #cv2.imshow("hist", images[row['original_index']])
             
             h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
             hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-            hist_h = hist_h[1:]
+            base_hist_h = hist_h[1:]
             hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
-            hist_s = hist_s[1:]
+            base_hist_s = hist_s[1:]
             hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
-            hist_v = hist_v[1:]
+            base_hist_v = hist_v[1:]
             
-                      
+            h, s, v = hsv_test1[:,:,0], hsv_test1[:,:,1], hsv_test1[:,:,2]
+            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+            one_hist_h = hist_h[1:]
+            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
+            one_hist_s = hist_s[1:]
+            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
+            one_hist_v = hist_v[1:]
+            
+            h, s, v = hsv_test2[:,:,0], hsv_test2[:,:,1], hsv_test2[:,:,2]
+            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+            two_hist_h = hist_h[1:]
+            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
+            two_hist_s = hist_s[1:]
+            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
+            two_hist_v = hist_v[1:] 
+            
+            
+            similarity_1 = cv2.compareHist(base_hist_v, one_hist_v, cv2.HISTCMP_KL_DIV) #HISTCMP_CHISQR and HISTCMP_KL_DIV
+            similarity_2 = cv2.compareHist(base_hist_v, two_hist_v, cv2.HISTCMP_KL_DIV)
+
+            print(similarity_1)
+            print(similarity_2)         
             
             plt.subplot(2, 2, 1) # row 1, col 2 index 1
-            plt.plot(hist_h, color='r', label="h")
-            plt.plot(hist_s, color='g', label="s")
-            plt.plot(hist_v, color='b', label="v")
+            plt.plot(base_hist_h, color='r', label="h")
+            plt.plot(base_hist_s, color='g', label="s")
+            plt.plot(base_hist_v, color='b', label="v")
+            plt.title('v')
 
             plt.subplot(2, 2, 2) # index 2
-            plt.plot(hist_h, color='r', label="h")
-            plt.plot(hist_s, color='g', label="s")
-            plt.plot(hist_v, color='b', label="v")
+            plt.plot(one_hist_h, color='r', label="h")
+            plt.plot(one_hist_s, color='g', label="s")
+            plt.plot(one_hist_v, color='b', label="v")
+            plt.title(similarity_1)
             
             plt.subplot(2, 2, 3) # index 2
-            plt.plot(hist_h, color='r', label="h")
-            plt.plot(hist_s, color='g', label="s")
-            plt.plot(hist_v, color='b', label="v")
-
-            #plt.show()
+            plt.plot(two_hist_h, color='r', label="h")
+            plt.plot(two_hist_s, color='g', label="s")
+            plt.plot(two_hist_v, color='b', label="v")
+            plt.title(similarity_2)
+           
             
             
-            #plt.legend()
+            
+            
+            
             plt.show()
             
+            
+            #use ssssssssssssss
             
             #plt.hist(hist_test1.ravel(),256,[0,256]); plt.show()
             #plt.hist(hist_test2.ravel(),256,[0,256]); plt.show()
