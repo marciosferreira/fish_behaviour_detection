@@ -71,13 +71,28 @@ for idx_frame in range(3850,6000):   #3000 to 4000
     quadrant_local = []
     fish_area = []
     #fish_color = []
+    images = []
 
     counter = 0
     for idx, cnt in enumerate(contours):      
         area = cv2.contourArea(cnt)        
 
 
-        if area > 100 and area < 1500:          
+        if area > 100 and area < 1500: 
+          
+          
+          
+          
+          image = frame 
+          mask = np.zeros(image.shape, dtype=np.uint8)
+          mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
+          result1 = cv2.bitwise_and(image, mask)            
+          
+          
+          
+          
+          
+                 
 
           #will be used to predict the size of the fish excluding the tail part
           fish_total_pixels = len(cnt)
@@ -171,71 +186,10 @@ for idx_frame in range(3850,6000):   #3000 to 4000
           fish_head_local.append(aver_head)
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
-          #fish_color.append(color)
-          #########################################################################################################
-          if idx_frame == 3900 and idx == 0:
-                      
-            image = frame 
-            mask = np.zeros(image.shape, dtype=np.uint8)
-            mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)
-            
-            kernel = np.ones((5,5), np.uint8)
-            eroded_mask = cv2.erode(mask, kernel, iterations=1)
-                        
-            result1 = cv2.bitwise_and(image, eroded_mask)            
-            img1_grey = cv2.cvtColor(result1, cv2.COLOR_BGR2GRAY)
-            
-            image_enhanced = cv2.equalizeHist(img1_grey)
-            img1_grey = cv2.bilateralFilter(image_enhanced, 9, 100, 50)
-            
-            img1_grey = cv2.rotate(img1_grey, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                     
-         
-          elif idx_frame > 3900: # and idx == 0: #print("else")
-            image = frame 
-            mask = np.zeros(image.shape, dtype=np.uint8)
-            mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)
-            
-            kernel = np.ones((5,5), np.uint8)
-            eroded_mask = cv2.erode(mask, kernel, iterations=1)            
-            
-            result2 = cv2.bitwise_and(image, eroded_mask)
-            img2_grey = cv2.cvtColor(result2, cv2.COLOR_BGR2GRAY)
-            
-            image_enhanced = cv2.equalizeHist(img2_grey)
-            img2_grey = cv2.bilateralFilter(image_enhanced, 9, 100, 50)
-            
-            cv2.imshow('image1', img1_grey)
-            cv2.imshow('image2', img2_grey)
-            
-            # Initiate ORB detector
-            orb = cv2.ORB_create()
-            # find the keypoints and descriptors with ORB
-            kp1, des1 = orb.detectAndCompute(img1_grey,None)
-            kp2, des2 = orb.detectAndCompute(img2_grey,None)
-            
-            # create BFMatcher object
-            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-            
-            print(des1)
-            print(des2)
-
-            # Match descriptors.
-            
-            matches = bf.match(des1,des2)
-            # Sort them in the order of their distance.
-            matches = sorted(matches, key = lambda x:x.distance)
-            total = []
-            for m in matches:
-              print(m.distance)
-              total.append(m.distance)
-            print("soma")
-            print(sum(total))
-            print('\n')
-            # Draw first 10 matches.
-            img3 = cv2.drawMatches(img1_grey,kp1,img2_grey,kp2,matches[:10],None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-            plt.imshow(img3), plt.show()                   
+          images.append(result1)
           
+          
+                       
           counter +=1
 
     
@@ -252,6 +206,7 @@ for idx_frame in range(3850,6000):   #3000 to 4000
     if previous_df is None:
       
       previous_df = dframe.copy()
+      previous_images = images.copy()
 
       #print(previous_df)
       #previous_df['fish_id'] = range(1, 1+len(previous_df))
@@ -261,6 +216,7 @@ for idx_frame in range(3850,6000):   #3000 to 4000
     
   
     unique_quadrants = dframe.quadrant_local.unique()
+    
     for index_q, row_q in enumerate(unique_quadrants):      
       fish_per_quadrant = (dframe['quadrant_local']==quadr).sum()
 
@@ -272,14 +228,14 @@ for idx_frame in range(3850,6000):   #3000 to 4000
           update_counter = 0
           if counter_activation == 1:
             dframe_last_seen = previous_df.copy()
+            images_last_seen = previous_images.copy()
             counter_activation = 0         
           continue
 
-        if (update_counter == 0 or update_counter == 1) and fish_per_quadrant == 2:           
-            dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]
-            previous_df = dframe.copy()
-            
-            continue      
+        if (update_counter == 1) and fish_per_quadrant == 2:                    
+          dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]         
+          previous_df = dframe.copy()          
+          continue      
      
        
         filtered_df = dframe[(dframe.quadrant_local == row_q)]
@@ -294,24 +250,173 @@ for idx_frame in range(3850,6000):   #3000 to 4000
           current_position_fish_local = row['position_fish_local']          
                       
           # here we decide which fish is which
-          if update_counter == 90 or update_counter == 91:
+          if update_counter == 90:             
 
             previous_fish_1 = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q].iloc[0]   
             previous_fish_2 = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q].iloc[1]
 
-            similarity_1 = abs(row['fish_area'] - previous_fish_1['fish_area'])
+            '''similarity_1 = abs(row['fish_area'] - previous_fish_1['fish_area'])
             similarity_2 = abs(row['fish_area'] - previous_fish_2['fish_area'])
 
             if similarity_1 < similarity_2:
 
               dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id']) 
             else:
-              dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])
+              dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])'''
+            ###################################
+            # Initiate ORB detector
+            '''orb = cv2.ORB_create()
+            
+            # find the keypoints and descriptors with ORB
+            kp_actual, des_actual = orb.detectAndCompute(images[row['original_index']],None)
+            kp1, des1 = orb.detectAndCompute(images_last_seen[previous_fish_1.iloc[0]], None)
+            kp2, des2 = orb.detectAndCompute(images_last_seen[previous_fish_2.iloc[0]], None)
+            
+            # create BFMatcher object
+            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            
+            matches1 = bf.match(des_actual,des1)
+            # Sort them in the order of their distance.
+            matches1 = sorted(matches1, key = lambda x:x.distance)
+            total1 = []
+            for m in matches1:
+              #print(m.distance)
+              total1.append(m.distance)
+            similarity_1 = sum(total1[:5])
+            
+            print(similarity_1)
+
+            
+            matches2 = bf.match(des_actual,des2)
+            # Sort them in the order of their distance.
+            matches2 = sorted(matches2, key = lambda x:x.distance)
+            total2 = []
+            for m in matches2:
+              #print(m.distance)
+              total2.append(m.distance)
+            similarity_2 = sum(total2[:5])           
+            ################################           
+            print(similarity_2)'''
+            
+            
+            hsv_base = cv2.cvtColor(images[row['original_index']], cv2.COLOR_BGR2HSV)
+            hsv_test1 = cv2.cvtColor(images_last_seen[previous_fish_1.iloc[0]], cv2.COLOR_BGR2HSV)
+            hsv_test2 = cv2.cvtColor(images_last_seen[previous_fish_2.iloc[0]], cv2.COLOR_BGR2HSV)
+
+            
+            h_bins = 50
+            s_bins = 60
+            histSize = [h_bins, s_bins]
+            # hue varies from 0 to 179, saturation from 0 to 255
+            h_ranges = [0, 180]
+            s_ranges = [0, 256]
+            ranges = h_ranges + s_ranges # concat lists
+            # Use the 0-th and 1-st channels
+            channels = [0, 2]
+            
+            hist_base = cv2.calcHist([hsv_base], channels, None, histSize, ranges, accumulate=False)            
+            cv2.normalize(hist_base, hist_base, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+            
+            hist_test1 = cv2.calcHist([hsv_test1], channels, None, histSize, ranges, accumulate=False)
+            cv2.normalize(hist_test1, hist_test1, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+            hist_test2 = cv2.calcHist([hsv_test2], channels, None, histSize, ranges, accumulate=False)
+            cv2.normalize(hist_test2, hist_test2, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+                        
+            similarity_1 = cv2.compareHist(hist_base[1:15], hist_test1[1:15], 1)
+            similarity_2 = cv2.compareHist(hist_base[1:15], hist_test2[1:15], 1)
+
+            print(similarity_1)
+            print(similarity_2)
+            
+            cv2.imshow("hist", images[row['original_index']])
+            
+            h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
+            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+            hist_h = hist_h[1:]
+            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
+            hist_s = hist_s[1:]
+            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
+            hist_v = hist_v[1:]
+            
+                      
+            
+            plt.subplot(2, 2, 1) # row 1, col 2 index 1
+            plt.plot(hist_h, color='r', label="h")
+            plt.plot(hist_s, color='g', label="s")
+            plt.plot(hist_v, color='b', label="v")
+
+            plt.subplot(2, 2, 2) # index 2
+            plt.plot(hist_h, color='r', label="h")
+            plt.plot(hist_s, color='g', label="s")
+            plt.plot(hist_v, color='b', label="v")
+            
+            plt.subplot(2, 2, 3) # index 2
+            plt.plot(hist_h, color='r', label="h")
+            plt.plot(hist_s, color='g', label="s")
+            plt.plot(hist_v, color='b', label="v")
+
+            #plt.show()
+            
+            
+            #plt.legend()
+            plt.show()
+            
+            
+            #plt.hist(hist_test1.ravel(),256,[0,256]); plt.show()
+            #plt.hist(hist_test2.ravel(),256,[0,256]); plt.show()
+
+
+
+            
+            #quit()
+
+            
+            
+            
+            
+            if idx == 0:            
+              if similarity_1 < similarity_2:
+                dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id'])
+                already = row['original_index']
+                all = list(filtered_df['original_index'])
+                final = [x for x in all if x != already]           
+                dframe.loc[final,'fish_id'] = int(previous_fish_2['fish_id'])                            
+              else:
+                dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])
+                already = row['original_index']
+                all = list(filtered_df['original_index'])
+                final = [x for x in all if x != already]           
+                dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])                 
+            
+              first_diff = abs(similarity_1-similarity_2)
+              
+            if idx == 1:
+              second_diff = abs(similarity_1-similarity_2)
+              if second_diff > first_diff:
+                if similarity_1 < similarity_2:
+                  dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id'])
+                  already = row['original_index']
+                  all = list(filtered_df['original_index'])
+                  final = [x for x in all if x != already]           
+                  dframe.loc[final,'fish_id'] = int(previous_fish_2['fish_id'])                            
+                else:
+                  dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])
+                  already = row['original_index']
+                  all = list(filtered_df['original_index'])
+                  final = [x for x in all if x != already]           
+                  dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])               
+              else:
+                print("nothing")
+              
+              
+            
+            
+            
 
             activate_counter = 1
 
             counter_activation = 1
-
+            
             continue
      
        
