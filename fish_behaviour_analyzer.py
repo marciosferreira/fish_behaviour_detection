@@ -1,4 +1,4 @@
-quadr = 'B'
+quadr = 'A'
 import cv2
 import numpy as np
 import math
@@ -37,7 +37,11 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(3850,6000):   #3000 to 4000
+for idx_frame in range(3450,6000):   #3000 to 4000
+  if idx_frame > 13540:
+    break
+  
+    
   
   cap.set(1, idx_frame)
   
@@ -304,7 +308,6 @@ for idx_frame in range(3850,6000):   #3000 to 4000
             hsv_test2 = cv2.cvtColor(images_last_seen[previous_fish_2.iloc[0]], cv2.COLOR_BGR2HSV)
 
             
-            #cv2.imshow("hist", images[row['original_index']])
             
             h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
             hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
@@ -331,17 +334,17 @@ for idx_frame in range(3850,6000):   #3000 to 4000
             two_hist_v = hist_v[1:] 
             
             
-            similarity_1 = cv2.compareHist(base_hist_v, one_hist_v, cv2.HISTCMP_KL_DIV) #HISTCMP_CHISQR and HISTCMP_KL_DIV
-            similarity_2 = cv2.compareHist(base_hist_v, two_hist_v, cv2.HISTCMP_KL_DIV)
+            similarity_1 = cv2.compareHist(base_hist_h, one_hist_h, cv2.HISTCMP_KL_DIV) #HISTCMP_CHISQR and HISTCMP_KL_DIV
+            similarity_2 = cv2.compareHist(base_hist_h, two_hist_h, cv2.HISTCMP_KL_DIV)
 
-            print(similarity_1)
-            print(similarity_2)         
-            
+            #print(similarity_1)
+            #print(similarity_2)         
+            '''
             plt.subplot(2, 2, 1) # row 1, col 2 index 1
             plt.plot(base_hist_h, color='r', label="h")
             plt.plot(base_hist_s, color='g', label="s")
             plt.plot(base_hist_v, color='b', label="v")
-            plt.title('v')
+            plt.title('h')
 
             plt.subplot(2, 2, 2) # index 2
             plt.plot(one_hist_h, color='r', label="h")
@@ -360,24 +363,18 @@ for idx_frame in range(3850,6000):   #3000 to 4000
             
             
             
-            plt.show()
+            plt.show(block=False)
+            plt.pause(0.5)
+            plt.close()
+          
+            '''
             
-            
-            #use ssssssssssssss
-            
-            #plt.hist(hist_test1.ravel(),256,[0,256]); plt.show()
-            #plt.hist(hist_test2.ravel(),256,[0,256]); plt.show()
-
-
-
-            
-            #quit()
-
+                    
             
             
             
-            
-            if idx == 0:            
+            if idx == 0:
+                         
               if similarity_1 < similarity_2:
                 dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id'])
                 already = row['original_index']
@@ -392,6 +389,8 @@ for idx_frame in range(3850,6000):   #3000 to 4000
                 dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])                 
             
               first_diff = abs(similarity_1-similarity_2)
+              
+              
               
             if idx == 1:
               second_diff = abs(similarity_1-similarity_2)
@@ -510,6 +509,75 @@ for idx_frame in range(3850,6000):   #3000 to 4000
         #cv2.imwrite('C:/Users/marci/Desktop/background_3.jpg', frame)
   
     # Press Q on keyboard to  exit
+    
+    idx = dframe.index[dframe['fish_id'] == 1.0][0]    
+    hsv_base = cv2.cvtColor(images[idx], cv2.COLOR_BGR2HSV)
+    h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
+    hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+    one_hist_h = hist_h[1:]
+    #np.multiply(array1,n)
+    try:
+      one_average_h = ((np.add((np.multiply(one_average_h, 50)), one_hist_h) / 51).astype(int)).astype(float)
+    except:
+      one_average_h = one_hist_h
+    
+    one_average_h = np.float32(one_average_h)
+
+    
+    idx = dframe.index[dframe['fish_id'] == 2.0][0]    
+    hsv_base = cv2.cvtColor(images[idx], cv2.COLOR_BGR2HSV)
+    h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
+    hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+    two_hist_h = hist_h[1:]
+    #np.multiply(array1,n)
+    try:
+      two_average_h = ((np.add((np.multiply(two_average_h, 90)), two_hist_h) / 91).astype(int)).astype(float)
+    except:
+      two_average_h = two_hist_h 
+    two_average_h = np.float32(two_average_h)
+    '''hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
+    base_hist_s = hist_s[1:]
+    hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
+    base_hist_v = hist_v[1:] '''
+    
+    ''' 
+    plt.subplot(2, 2, 1) # row 1, col 2 index 1
+    plt.plot(base_hist_h, color='r', label="h")
+    plt.plot(base_hist_s, color='g', label="s")
+    plt.plot(base_hist_v, color='b', label="v")'''
+    print(cv2.compareHist(one_average_h, two_average_h, cv2.HISTCMP_KL_DIV)) #HISTCMP_CHISQR and HISTCMP_KL_DIV
+
+    plt.plot(one_average_h, color="r", label="h")
+    plt.plot(two_average_h, color="b", label="b")
+
+    plt.title('graph')    
+    plt.show(block=False)
+    plt.pause(0.2)
+    plt.close()
+    
+
+    
+  
+    
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     if cv2.waitKey(25) & 0xFF == ord('q'):
       break
 
