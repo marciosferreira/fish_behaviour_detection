@@ -1,4 +1,4 @@
-quadr = 'A'
+quadr = 'D'
 import cv2
 import numpy as np
 import math
@@ -38,7 +38,7 @@ if (cap.isOpened()== False):
 
 # Read until video is completed
 for idx_frame in range(3450,6000):   #3000 to 4000
-  if idx_frame > 13540:
+  if idx_frame > 3540:
     break
   
     
@@ -75,7 +75,8 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     quadrant_local = []
     fish_area = []
     #fish_color = []
-    images = []
+    histograms = []
+    histograms_averages_id = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
 
     counter = 0
     for idx, cnt in enumerate(contours):      
@@ -90,13 +91,11 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           image = frame 
           mask = np.zeros(image.shape, dtype=np.uint8)
           mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
-          result1 = cv2.bitwise_and(image, mask)            
-          
-          
-          
-          
-          
-                 
+          result1 = cv2.bitwise_and(image, mask)
+          hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
+          h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
+          hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
+          hist_h = hist_h[1:]                 
 
           #will be used to predict the size of the fish excluding the tail part
           fish_total_pixels = len(cnt)
@@ -190,7 +189,7 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           fish_head_local.append(aver_head)
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
-          images.append(result1)
+          histograms.append(result1)
           
           
                        
@@ -210,7 +209,8 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     if previous_df is None:
       
       previous_df = dframe.copy()
-      previous_images = images.copy()
+      previous_histograms = histograms.copy()
+      previous_histograms_averages_id = histograms_averages_id.copy()
 
       #print(previous_df)
       #previous_df['fish_id'] = range(1, 1+len(previous_df))
@@ -232,13 +232,16 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           update_counter = 0
           if counter_activation == 1:
             dframe_last_seen = previous_df.copy()
-            images_last_seen = previous_images.copy()
+            histograms_last_seen = previous_histograms.copy()
+            histograms_averages_id_last_seen = histograms_averages_id.copy()
             counter_activation = 0         
           continue
 
         if (update_counter == 1) and fish_per_quadrant == 2:                    
           dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]         
-          previous_df = dframe.copy()          
+          previous_df = dframe.copy()
+          previous_histograms = histograms.copy() 
+          previous_histograms_averages_id = histograms_averages_id.copy()         
           continue      
      
        
@@ -258,84 +261,14 @@ for idx_frame in range(3450,6000):   #3000 to 4000
 
             previous_fish_1 = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q].iloc[0]   
             previous_fish_2 = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q].iloc[1]
-
-            '''similarity_1 = abs(row['fish_area'] - previous_fish_1['fish_area'])
-            similarity_2 = abs(row['fish_area'] - previous_fish_2['fish_area'])
-
-            if similarity_1 < similarity_2:
-
-              dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id']) 
-            else:
-              dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])'''
-            ###################################
-            # Initiate ORB detector
-            '''orb = cv2.ORB_create()
+           
+            #############################################################################################
+            base_hist_h = histograms[row['original_index']]
+            one_average_h = histograms_averages[previous_fish_1['fish_id']]
+            two_average_h = histograms_averages[previous_fish_1['fish_id']]
             
-            # find the keypoints and descriptors with ORB
-            kp_actual, des_actual = orb.detectAndCompute(images[row['original_index']],None)
-            kp1, des1 = orb.detectAndCompute(images_last_seen[previous_fish_1.iloc[0]], None)
-            kp2, des2 = orb.detectAndCompute(images_last_seen[previous_fish_2.iloc[0]], None)
-            
-            # create BFMatcher object
-            bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-            
-            matches1 = bf.match(des_actual,des1)
-            # Sort them in the order of their distance.
-            matches1 = sorted(matches1, key = lambda x:x.distance)
-            total1 = []
-            for m in matches1:
-              #print(m.distance)
-              total1.append(m.distance)
-            similarity_1 = sum(total1[:5])
-            
-            print(similarity_1)
-
-            
-            matches2 = bf.match(des_actual,des2)
-            # Sort them in the order of their distance.
-            matches2 = sorted(matches2, key = lambda x:x.distance)
-            total2 = []
-            for m in matches2:
-              #print(m.distance)
-              total2.append(m.distance)
-            similarity_2 = sum(total2[:5])           
-            ################################           
-            print(similarity_2)'''
-            
-            
-            hsv_base = cv2.cvtColor(images[row['original_index']], cv2.COLOR_BGR2HSV)
-            hsv_test1 = cv2.cvtColor(images_last_seen[previous_fish_1.iloc[0]], cv2.COLOR_BGR2HSV)
-            hsv_test2 = cv2.cvtColor(images_last_seen[previous_fish_2.iloc[0]], cv2.COLOR_BGR2HSV)
-
-            
-            
-            h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
-            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-            base_hist_h = hist_h[1:]
-            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
-            base_hist_s = hist_s[1:]
-            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
-            base_hist_v = hist_v[1:]
-            
-            h, s, v = hsv_test1[:,:,0], hsv_test1[:,:,1], hsv_test1[:,:,2]
-            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-            one_hist_h = hist_h[1:]
-            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
-            one_hist_s = hist_s[1:]
-            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
-            one_hist_v = hist_v[1:]
-            
-            h, s, v = hsv_test2[:,:,0], hsv_test2[:,:,1], hsv_test2[:,:,2]
-            hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-            two_hist_h = hist_h[1:]
-            hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
-            two_hist_s = hist_s[1:]
-            hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
-            two_hist_v = hist_v[1:] 
-            
-            
-            similarity_1 = cv2.compareHist(base_hist_h, one_hist_h, cv2.HISTCMP_KL_DIV) #HISTCMP_CHISQR and HISTCMP_KL_DIV
-            similarity_2 = cv2.compareHist(base_hist_h, two_hist_h, cv2.HISTCMP_KL_DIV)
+            similarity_1 = cv2.compareHist(base_hist_h, one_average_h, cv2.HISTCMP_KL_DIV) 
+            similarity_2 = cv2.compareHist(base_hist_h, two_average_h, cv2.HISTCMP_KL_DIV)
 
             #print(similarity_1)
             #print(similarity_2)         
@@ -392,7 +325,7 @@ for idx_frame in range(3450,6000):   #3000 to 4000
               
               
               
-            if idx == 1:
+            '''if idx == 1:
               second_diff = abs(similarity_1-similarity_2)
               if second_diff > first_diff:
                 if similarity_1 < similarity_2:
@@ -408,14 +341,10 @@ for idx_frame in range(3450,6000):   #3000 to 4000
                   final = [x for x in all if x != already]           
                   dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])               
               else:
-                print("nothing")
+                print("nothing")'''
               
               
-            
-            
-            
-
-            activate_counter = 1
+            #activate_counter = 1
 
             counter_activation = 1
             
@@ -448,14 +377,31 @@ for idx_frame in range(3450,6000):   #3000 to 4000
       
           if lower_indice[0] == 0:      
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 90 + row['fish_area'])/91
-            
-            
+            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 60 + row['fish_area'])/61
+           
+            try:
+              fish_id = previous_fish_1_id
+              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            except:
+              histograms_averages = histograms
+              print("ddddddddddddddd")
+              print(np.where(histograms_averages_id == fish_id))
+              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+
+                            
           else:   
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 90 + row['fish_area'])/91
-           
-        
+            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 60 + row['fish_area'])/61
+            
+            try:
+              fish_id = previous_fish_2_id
+              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            except:
+              histograms_averages = histograms
+              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+
+                       
+                               
     update_counter += 1
     if update_counter > 100:
       update_counter = 100
@@ -481,9 +427,7 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     fish_id = dframe.fish_id.tolist()
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
-      #if math.isnan(value):
-        #pass
-      #else:
+     
       cv2.putText(drawn_image,str(fish_id[indice]),(position_list[indice]), font, 1,(255,255,255),2)
     
 
@@ -491,69 +435,16 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     cv2.line(drawn_image, (427, 0), (427,870), (255, 255, 255), thickness=1)
     cv2.line(drawn_image, (0, 417), (870,417), (255, 255, 255), thickness=1)   
 
-    #print(final_image.shape)
 
     #show the image with filtered countours plotted   
     cv2.imshow('Frame',drawn_image)
 
 
 
-    #if fish_per_quadrant == 2:
     previous_df = dframe.copy()
-    #else:
-      #dframe_last_seen = previous_df.copy()
+   
     
-
-    #usefull if extract one image for background needed
-    #if i == 3200:
-        #cv2.imwrite('C:/Users/marci/Desktop/background_3.jpg', frame)
-  
-    # Press Q on keyboard to  exit
     
-    idx = dframe.index[dframe['fish_id'] == 1.0][0]    
-    hsv_base = cv2.cvtColor(images[idx], cv2.COLOR_BGR2HSV)
-    h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
-    hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-    one_hist_h = hist_h[1:]
-    #np.multiply(array1,n)
-    try:
-      one_average_h = ((np.add((np.multiply(one_average_h, 50)), one_hist_h) / 51).astype(int)).astype(float)
-    except:
-      one_average_h = one_hist_h
-    
-    one_average_h = np.float32(one_average_h)
-
-    
-    idx = dframe.index[dframe['fish_id'] == 2.0][0]    
-    hsv_base = cv2.cvtColor(images[idx], cv2.COLOR_BGR2HSV)
-    h, s, v = hsv_base[:,:,0], hsv_base[:,:,1], hsv_base[:,:,2]
-    hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-    two_hist_h = hist_h[1:]
-    #np.multiply(array1,n)
-    try:
-      two_average_h = ((np.add((np.multiply(two_average_h, 90)), two_hist_h) / 91).astype(int)).astype(float)
-    except:
-      two_average_h = two_hist_h 
-    two_average_h = np.float32(two_average_h)
-    '''hist_s = cv2.calcHist([s],[0],None,[256],[0,256])
-    base_hist_s = hist_s[1:]
-    hist_v = cv2.calcHist([v],[0],None,[256],[0,256])
-    base_hist_v = hist_v[1:] '''
-    
-    ''' 
-    plt.subplot(2, 2, 1) # row 1, col 2 index 1
-    plt.plot(base_hist_h, color='r', label="h")
-    plt.plot(base_hist_s, color='g', label="s")
-    plt.plot(base_hist_v, color='b', label="v")'''
-    print(cv2.compareHist(one_average_h, two_average_h, cv2.HISTCMP_KL_DIV)) #HISTCMP_CHISQR and HISTCMP_KL_DIV
-
-    plt.plot(one_average_h, color="r", label="h")
-    plt.plot(two_average_h, color="b", label="b")
-
-    plt.title('graph')    
-    plt.show(block=False)
-    plt.pause(0.2)
-    plt.close()
     
 
     
