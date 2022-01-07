@@ -30,6 +30,8 @@ lopp = 0
 
 previous_id_fish_local = []
 
+histograms_ids = ['nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan']
+
 cv2.imshow('background' , bw_back)
 
 # Check if camera opened successfully
@@ -37,8 +39,8 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(3450,6000):   #3000 to 4000
-  if idx_frame > 3540:
+for idx_frame in range(3550,6000):   #3000 to 4000
+  if idx_frame > 93540:
     break
   
     
@@ -50,6 +52,8 @@ for idx_frame in range(3450,6000):   #3000 to 4000
   if ret == True:
 
     cv2.imshow('Main' , frame)
+    
+    
 
     # Display the resulting frame
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -57,10 +61,7 @@ for idx_frame in range(3450,6000):   #3000 to 4000
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
           
-    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY) 
-
-
-  
+    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)  
     
 
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -76,17 +77,14 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     fish_area = []
     #fish_color = []
     histograms = []
-    histograms_averages_id = np.array([np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan])
+    
 
     counter = 0
     for idx, cnt in enumerate(contours):      
         area = cv2.contourArea(cnt)        
 
 
-        if area > 100 and area < 1500: 
-          
-          
-          
+        if area > 100 and area < 1500:          
           
           image = frame 
           mask = np.zeros(image.shape, dtype=np.uint8)
@@ -95,8 +93,8 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
           h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
           hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-          hist_h = hist_h[1:]                 
-
+          hist_h = hist_h[1:]
+          
           #will be used to predict the size of the fish excluding the tail part
           fish_total_pixels = len(cnt)
 
@@ -189,7 +187,7 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           fish_head_local.append(aver_head)
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
-          histograms.append(result1)
+          histograms.append(hist_h)
           
           
                        
@@ -210,15 +208,15 @@ for idx_frame in range(3450,6000):   #3000 to 4000
       
       previous_df = dframe.copy()
       previous_histograms = histograms.copy()
-      previous_histograms_averages_id = histograms_averages_id.copy()
-
-      #print(previous_df)
-      #previous_df['fish_id'] = range(1, 1+len(previous_df))
-      previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
-      
+      previous_histograms_ids = histograms_ids.copy()     
      
-    
-  
+      previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
+      list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
+         
+      previous_histograms_ids[1] = histograms[list_idx[0]]
+      previous_histograms_ids[2] = histograms[list_idx[1]]
+
+       
     unique_quadrants = dframe.quadrant_local.unique()
     
     for index_q, row_q in enumerate(unique_quadrants):      
@@ -233,24 +231,25 @@ for idx_frame in range(3450,6000):   #3000 to 4000
           if counter_activation == 1:
             dframe_last_seen = previous_df.copy()
             histograms_last_seen = previous_histograms.copy()
-            histograms_averages_id_last_seen = histograms_averages_id.copy()
+            histograms_X_Y = {"X": 'nan', "Y": 'nan'}
             counter_activation = 0         
           continue
 
         if (update_counter == 1) and fish_per_quadrant == 2:                    
-          dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]         
+          dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]          
+          list_idx = dframe.loc[dframe['quadrant_local'] == quadr].index.tolist()
+          print(list_idx)
+          histograms_X_Y['X'] = histograms[list_idx[0]]
+          histograms_X_Y['Y'] = histograms[list_idx[1]]          
+          
+          previous_histograms_X_Y = histograms_X_Y.copy()                 
           previous_df = dframe.copy()
-          previous_histograms = histograms.copy() 
-          previous_histograms_averages_id = histograms_averages_id.copy()         
           continue      
      
        
         filtered_df = dframe[(dframe.quadrant_local == row_q)]
         filtered_df.index = filtered_df.index.set_names(['original_index'])
-        filtered_df = filtered_df.reset_index()        
-          
-      
-        
+        filtered_df = filtered_df.reset_index()           
              
         for idx, row in filtered_df.iterrows():
           distances_indices = [] 
@@ -264,46 +263,13 @@ for idx_frame in range(3450,6000):   #3000 to 4000
            
             #############################################################################################
             base_hist_h = histograms[row['original_index']]
-            one_average_h = histograms_averages[previous_fish_1['fish_id']]
-            two_average_h = histograms_averages[previous_fish_1['fish_id']]
+            one_average_h = histograms_last_seen[previous_fish_1.iloc[0]]            
+            two_average_h = histograms_last_seen[previous_fish_2.iloc[0]]
+            
+            histograms_last_seen
             
             similarity_1 = cv2.compareHist(base_hist_h, one_average_h, cv2.HISTCMP_KL_DIV) 
-            similarity_2 = cv2.compareHist(base_hist_h, two_average_h, cv2.HISTCMP_KL_DIV)
-
-            #print(similarity_1)
-            #print(similarity_2)         
-            '''
-            plt.subplot(2, 2, 1) # row 1, col 2 index 1
-            plt.plot(base_hist_h, color='r', label="h")
-            plt.plot(base_hist_s, color='g', label="s")
-            plt.plot(base_hist_v, color='b', label="v")
-            plt.title('h')
-
-            plt.subplot(2, 2, 2) # index 2
-            plt.plot(one_hist_h, color='r', label="h")
-            plt.plot(one_hist_s, color='g', label="s")
-            plt.plot(one_hist_v, color='b', label="v")
-            plt.title(similarity_1)
-            
-            plt.subplot(2, 2, 3) # index 2
-            plt.plot(two_hist_h, color='r', label="h")
-            plt.plot(two_hist_s, color='g', label="s")
-            plt.plot(two_hist_v, color='b', label="v")
-            plt.title(similarity_2)
-           
-            
-            
-            
-            
-            
-            plt.show(block=False)
-            plt.pause(0.5)
-            plt.close()
-          
-            '''
-            
-                    
-            
+            similarity_2 = cv2.compareHist(base_hist_h, two_average_h, cv2.HISTCMP_KL_DIV)            
             
             
             if idx == 0:
@@ -311,53 +277,29 @@ for idx_frame in range(3450,6000):   #3000 to 4000
               if similarity_1 < similarity_2:
                 dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id'])
                 already = row['original_index']
-                all = list(filtered_df['original_index'])
+                all = filtered_df['original_index'].tolist()
                 final = [x for x in all if x != already]           
                 dframe.loc[final,'fish_id'] = int(previous_fish_2['fish_id'])                            
               else:
                 dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])
                 already = row['original_index']
-                all = list(filtered_df['original_index'])
+                all = filtered_df['original_index'].tolist()
                 final = [x for x in all if x != already]           
                 dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])                 
             
-              first_diff = abs(similarity_1-similarity_2)
-              
-              
-              
-            '''if idx == 1:
-              second_diff = abs(similarity_1-similarity_2)
-              if second_diff > first_diff:
-                if similarity_1 < similarity_2:
-                  dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_1['fish_id'])
-                  already = row['original_index']
-                  all = list(filtered_df['original_index'])
-                  final = [x for x in all if x != already]           
-                  dframe.loc[final,'fish_id'] = int(previous_fish_2['fish_id'])                            
-                else:
-                  dframe.loc[row['original_index'],'fish_id'] = int(previous_fish_2['fish_id'])
-                  already = row['original_index']
-                  all = list(filtered_df['original_index'])
-                  final = [x for x in all if x != already]           
-                  dframe.loc[final,'fish_id'] = int(previous_fish_1['fish_id'])               
-              else:
-                print("nothing")'''
-              
-              
-            #activate_counter = 1
+              first_diff = abs(similarity_1-similarity_2)               
+           
 
             counter_activation = 1
             
             continue
-     
-       
-
+          
           previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
           previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
       
           previous_fish_1_id = previous_fish_1['fish_id']
           previous_fish_2_id = previous_fish_2['fish_id']
-
+          
           previous_fish_1_position = previous_fish_1['position_fish_local']
           previous_fish_2_position = previous_fish_2['position_fish_local']
 
@@ -375,33 +317,25 @@ for idx_frame in range(3450,6000):   #3000 to 4000
                   
           lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]
       
-          if lower_indice[0] == 0:      
+          if lower_indice[0] == 0:
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 60 + row['fish_area'])/61
-           
-            try:
-              fish_id = previous_fish_1_id
-              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
-            except:
-              histograms_averages = histograms
-              print("ddddddddddddddd")
-              print(np.where(histograms_averages_id == fish_id))
-              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            if update_counter  < 90:  
+              histograms_X_Y[previous_fish_1_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            else:
+              histograms_ids[int(previous_fish_1_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
 
-                            
-          else:   
+              
+          else:
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 60 + row['fish_area'])/61
-            
-            try:
-              fish_id = previous_fish_2_id
-              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
-            except:
-              histograms_averages = histograms
-              histograms_averages[fish_id] = ((np.add((np.multiply(histograms_averages[np.where(histograms_averages_id == fish_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            if update_counter  < 90:  
+              histograms_X_Y[previous_fish_2_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
+            else:
+              histograms_ids[int(previous_fish_2_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 30)), histograms[row['original_index']]) / 31)).astype(np.float32)
 
-                       
-                               
+            
+           
     update_counter += 1
     if update_counter > 100:
       update_counter = 100
@@ -436,37 +370,11 @@ for idx_frame in range(3450,6000):   #3000 to 4000
     cv2.line(drawn_image, (0, 417), (870,417), (255, 255, 255), thickness=1)   
 
 
-    #show the image with filtered countours plotted   
-    cv2.imshow('Frame',drawn_image)
+    #show the image with filtered countours plotted
+    imS = cv2.resize(drawn_image, (960, 540))              # Resize image   
+    cv2.imshow('Frame',imS)
 
-
-
-    previous_df = dframe.copy()
-   
-    
-    
-    
-
-    
-  
-    
-
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    previous_df = dframe.copy()  
     
     
     if cv2.waitKey(25) & 0xFF == ord('q'):
