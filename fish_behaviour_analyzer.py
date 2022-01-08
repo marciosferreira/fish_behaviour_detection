@@ -1,4 +1,4 @@
-comp_algo = 2
+comp_algo = 1
 quadr = 'B'
 import cv2
 import numpy as np
@@ -40,7 +40,7 @@ if (cap.isOpened()== False):
 
 # Read until video is completed
 for idx_frame in range(3500,10000000):   #3000 to 4000
-  print(idx_frame)
+  #print(idx_frame)
     
   
   cap.set(1, idx_frame)
@@ -229,13 +229,11 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
 
         #print(update_counter)    
 
-        if fish_per_quadrant < 2:
-          print("leess than 2")
+        if fish_per_quadrant < 2:          
           update_counter = 0          
           if make_copy_last_seen == True:
             dframe_last_seen = previous_df.copy()
-            make_copy_last_seen = False
-          print(dframe_last_seen)
+            make_copy_last_seen = False         
           histograms_last_seen = previous_histograms.copy()
           histograms_X_Y = {"X": 'nan', "Y": 'nan'}                
           continue
@@ -255,9 +253,7 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
              
         for idx, row in filtered_df.iterrows():
           distances_indices = [] 
-          current_position_fish_local = row['position_fish_local']          
-                      
-          ################
+          current_position_fish_local = row['position_fish_local']           
           
           previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
           previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
@@ -284,16 +280,22 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
       
           if lower_indice[0] == 0:
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
+            
+            #take the oportunity to update the fish area (area is not used for a while)
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 90 + row['fish_area'])/91
+            
+            #update the histograms
             if update_counter  <= 90:  
               histograms_X_Y[previous_fish_1_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
             else:
               histograms_ids[int(previous_fish_1_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
 
               
-          else:
+          else: #the same as above, but in a inverse way
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 90 + row['fish_area'])/91
+            
+            #update the histograms
             if update_counter  <= 90:  
               histograms_X_Y[previous_fish_2_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
             else:
@@ -312,26 +314,27 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
           a_average = histograms_last_seen[previous_fish_a.iloc[0]]            
           b_average = histograms_last_seen[previous_fish_b.iloc[0]]
           
-          similarity_a_X = cv2.compareHist(hist_X, a_average, comp_algo)
-          similarity_a_Y = cv2.compareHist(hist_Y, a_average, comp_algo) 
-          similarity_b_X = cv2.compareHist(hist_X, b_average, comp_algo)               
-          similarity_b_Y = cv2.compareHist(hist_Y, b_average, comp_algo)
+          similarity_a_Y = cv2.compareHist(hist_Y, a_average, comp_algo)
+          similarity_a_X = cv2.compareHist(hist_X, a_average, comp_algo) 
+          similarity_b_Y = cv2.compareHist(hist_Y, b_average, comp_algo)               
+          similarity_b_X = cv2.compareHist(hist_X, b_average, comp_algo)
           
-          if abs(similarity_a_X - similarity_a_Y) < abs(similarity_b_X - similarity_b_Y):
-            if similarity_a_X < similarity_a_Y:
+          print(similarity_a_Y)
+          print(similarity_a_X)
+          print(similarity_b_Y)
+          print(similarity_b_X)
+          print("############")
+          
+          
+          if (similarity_a_Y > similarity_a_X) and (similarity_b_Y < similarity_b_X):
               dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_a['fish_id']
               dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_b['fish_id']               
-            else:
+          elif (similarity_a_Y < similarity_a_X) and (similarity_b_Y > similarity_b_X):
               dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_b['fish_id']
-              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_a['fish_id']        
+              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_a['fish_id']
           else:
-            if similarity_b_X < similarity_b_Y:
-              dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_b['fish_id']
-              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_a['fish_id']               
-            else:
-              dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_a['fish_id']
-              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_b['fish_id']        
-                        
+            print("problem")
+              
           
                            
           
