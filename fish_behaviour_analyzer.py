@@ -1,4 +1,4 @@
-comp_algo = 1
+comp_algo = 'cv2.HISTCMP_BHATTACHARYYA'
 quadr = 'B'
 import cv2
 import numpy as np
@@ -234,7 +234,7 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
           if make_copy_last_seen == True:
             dframe_last_seen = previous_df.copy()
             make_copy_last_seen = False         
-          histograms_last_seen = previous_histograms.copy()
+          histograms_last_seen = previous_histograms.copy() ####################
           histograms_X_Y = {"X": 'nan', "Y": 'nan'}                
           continue
 
@@ -242,9 +242,10 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
           dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]          
           list_idx = dframe.loc[dframe['quadrant_local'] == quadr].index.tolist()          
           histograms_X_Y['X'] = histograms[list_idx[0]]
-          histograms_X_Y['Y'] = histograms[list_idx[1]]           
+          histograms_X_Y['Y'] = histograms[list_idx[1]]
+          previous_df = dframe.copy()         
           previous_histograms_X_Y = histograms_X_Y.copy()                 
-          previous_df = dframe.copy()
+         
                
        
         filtered_df = dframe[(dframe.quadrant_local == row_q)]
@@ -301,6 +302,9 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
             else:
               histograms_ids[int(previous_fish_2_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
 
+        if update_counter > 0 and update_counter < 90:
+          previous_histograms_X_Y = histograms_X_Y.copy()  
+        
         # here we decide which fish is 1 and 2 based on X and Y
         if update_counter == 90:          
           make_copy_last_seen = True          
@@ -314,18 +318,14 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
           a_average = histograms_last_seen[previous_fish_a.iloc[0]]            
           b_average = histograms_last_seen[previous_fish_b.iloc[0]]
           
-          similarity_a_Y = cv2.compareHist(hist_Y, a_average, comp_algo)
-          similarity_a_X = cv2.compareHist(hist_X, a_average, comp_algo) 
-          similarity_b_Y = cv2.compareHist(hist_Y, b_average, comp_algo)               
-          similarity_b_X = cv2.compareHist(hist_X, b_average, comp_algo)
+          similarity_a_Y = cv2.compareHist(hist_Y, a_average, cv2.HISTCMP_BHATTACHARYYA)
+          similarity_same = cv2.compareHist(hist_Y, hist_Y, cv2.HISTCMP_BHATTACHARYYA)
+          similarity_a_X = cv2.compareHist(hist_X, a_average, cv2.HISTCMP_BHATTACHARYYA) 
+          similarity_b_Y = cv2.compareHist(hist_Y, b_average, cv2.HISTCMP_BHATTACHARYYA)               
+          similarity_b_X = cv2.compareHist(hist_X, b_average, cv2.HISTCMP_BHATTACHARYYA)
           
-          print(similarity_a_Y)
-          print(similarity_a_X)
-          print(similarity_b_Y)
-          print(similarity_b_X)
-          print("############")
-          
-          
+       
+                    
           if (similarity_a_Y > similarity_a_X) and (similarity_b_Y < similarity_b_X):
               dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_a['fish_id']
               dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_b['fish_id']               
@@ -336,7 +336,9 @@ for idx_frame in range(3500,10000000):   #3000 to 4000
             print("problem")
               
           
-                           
+        if update_counter >= 90:
+          previous_histograms = histograms.copy() 
+                   
           
           
 
