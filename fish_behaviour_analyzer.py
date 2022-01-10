@@ -39,7 +39,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(3500,10000000):   #3000 to 4000
+for idx_frame in range(6000,10000000):   #3000 to 4000
   #print(idx_frame)
     
   
