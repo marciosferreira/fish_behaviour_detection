@@ -1,5 +1,4 @@
-comp_algo = 'cv2.HISTCMP_BHATTACHARYYA'
-quadr = 'B'
+quadr = 'D'
 import cv2
 import numpy as np
 import math
@@ -7,7 +6,7 @@ import pandas as pd
 import time
 quad_D = 1
 quad_D_count = 0
-update_counter = 92
+update_counter = 62
 import matplotlib.pyplot as plt 
 
 fish_0_history = []
@@ -39,8 +38,13 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
+<<<<<<< Updated upstream
 for idx_frame in range(6000,10000000):   #3000 to 4000
   #print(idx_frame)
+=======
+for idx_frame in range(6700,10000000):   #3000 to 4000
+  print(idx_frame)
+>>>>>>> Stashed changes
     
   
   cap.set(1, idx_frame)
@@ -93,8 +97,19 @@ for idx_frame in range(6000,10000000):   #3000 to 4000
           result1 = cv2.bitwise_and(image, mask)
           hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
           h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
-          hist_h = cv2.calcHist([h],[0],None,[256],[0,256])
-          hist_h = hist_h[1:]
+          hist_final = cv2.calcHist([h],[0],None,[256],[0,256])
+          hist_final = hist_final[1:70]
+          
+          #plt.subplot(2, 2, 1) # row 1, col 2 index 1
+          #plt.plot(hist_final, color='r', label="h")          
+          #plt.title('v')
+
+          #plt.subplot(2, 2, 2) # index 2
+          #plt.plot(hist_final, color='r', label="h")
+          #plt.show()
+          
+          
+          
           
           #will be used to predict the size of the fish excluding the tail part
           fish_total_pixels = len(cnt)
@@ -188,7 +203,7 @@ for idx_frame in range(6000,10000000):   #3000 to 4000
           fish_head_local.append(aver_head)
           quadrant_local.append(quadrant_value)
           fish_area.append(area)
-          histograms.append(hist_h)
+          histograms.append(hist_final)
           
           
           
@@ -234,7 +249,7 @@ for idx_frame in range(6000,10000000):   #3000 to 4000
           if make_copy_last_seen == True:
             dframe_last_seen = previous_df.copy()
             make_copy_last_seen = False         
-          histograms_last_seen = previous_histograms.copy() ####################
+          histograms_last_seen = histograms_ids.copy() 
           histograms_X_Y = {"X": 'nan', "Y": 'nan'}                
           continue
 
@@ -283,61 +298,132 @@ for idx_frame in range(6000,10000000):   #3000 to 4000
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
             
             #take the oportunity to update the fish area (area is not used for a while)
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 90 + row['fish_area'])/91
+            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 40 + row['fish_area'])/21
             
             #update the histograms
-            if update_counter  <= 90:  
-              histograms_X_Y[previous_fish_1_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
+            if update_counter  <= 60:  
+              histograms_X_Y[previous_fish_1_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
             else:
-              histograms_ids[int(previous_fish_1_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
+              histograms_ids[int(previous_fish_1_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
 
               
           else: #the same as above, but in a inverse way
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 90 + row['fish_area'])/91
+            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 40 + row['fish_area'])/21
             
             #update the histograms
-            if update_counter  <= 90:  
-              histograms_X_Y[previous_fish_2_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
+            if update_counter  <= 60:  
+              histograms_X_Y[previous_fish_2_id] = ((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
             else:
-              histograms_ids[int(previous_fish_2_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 90)), histograms[row['original_index']]) / 91)).astype(np.float32)
+              histograms_ids[int(previous_fish_2_id)] = ((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
 
-        if update_counter > 0 and update_counter < 90:
+        if update_counter > 0 and update_counter < 60:
           previous_histograms_X_Y = histograms_X_Y.copy()  
         
         # here we decide which fish is 1 and 2 based on X and Y
-        if update_counter == 90:          
-          make_copy_last_seen = True          
-          previous_fish = dframe_last_seen.loc[dframe_last_seen['quadrant_local'] == row_q]
-          previous_fish_a = previous_fish.iloc[0]
-          previous_fish_b = previous_fish.iloc[1]
+        if update_counter == 60:
+          #print(dframe)                   
+          current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
+          current_fish_a = current_fish.iloc[0]
+          current_fish_b = current_fish.iloc[1]
+          
+          current_fish_a_id = current_fish_a['fish_id']
+          hist_of_a = histograms_X_Y[current_fish_a_id]
+           
+          current_fish_b_id = current_fish_b['fish_id']
+          hist_of_b = histograms_X_Y[current_fish_b_id]
                   
-          hist_X = histograms_X_Y['X']    
-          hist_Y = histograms_X_Y['Y']
+          #hist_X = histograms_X_Y['X']    
+          #hist_Y = histograms_X_Y['Y']
                       
-          a_average = histograms_last_seen[previous_fish_a.iloc[0]]            
-          b_average = histograms_last_seen[previous_fish_b.iloc[0]]
+          a_histo_last_seen = histograms_ids[1]    #need to be fixed to be dinamic            
+          b_histo_last_seen = histograms_ids[2]    #need to be fixed to be dinamic         
+
+          print("mmmmmmmmmmmaaaaaaaxxxx")
+          a_histo_last_seen_max = np.amax(a_histo_last_seen)
+          b_histo_last_seen_max = np.amax(b_histo_last_seen)
+          hist_of_a_max = np.amax(hist_of_a)
+          hist_of_b_max = np.amax(hist_of_b)
+
+          histo_last_seen_higher = max(a_histo_last_seen_max, b_histo_last_seen_max)
+          histo_higher = max(hist_of_a_max, hist_of_b_max)
           
-          similarity_a_Y = cv2.compareHist(hist_Y, a_average, cv2.HISTCMP_BHATTACHARYYA)
-          similarity_same = cv2.compareHist(hist_Y, hist_Y, cv2.HISTCMP_BHATTACHARYYA)
-          similarity_a_X = cv2.compareHist(hist_X, a_average, cv2.HISTCMP_BHATTACHARYYA) 
-          similarity_b_Y = cv2.compareHist(hist_Y, b_average, cv2.HISTCMP_BHATTACHARYYA)               
-          similarity_b_X = cv2.compareHist(hist_X, b_average, cv2.HISTCMP_BHATTACHARYYA)
-          
-       
-                    
-          if (similarity_a_Y > similarity_a_X) and (similarity_b_Y < similarity_b_X):
-              dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_a['fish_id']
-              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_b['fish_id']               
-          elif (similarity_a_Y < similarity_a_X) and (similarity_b_Y > similarity_b_X):
-              dframe.loc[dframe.fish_id == 'X', "fish_id"] = previous_fish_b['fish_id']
-              dframe.loc[dframe.fish_id == 'Y', "fish_id"] = previous_fish_a['fish_id']
+          if histo_last_seen_higher == a_histo_last_seen_max and histo_higher == hist_of_a_max:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) 
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2)
+            make_copy_last_seen = True
+          elif histo_last_seen_higher == b_histo_last_seen_max and histo_higher == hist_of_a_max:
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) 
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2)
+            make_copy_last_seen = True
+          elif histo_last_seen_higher == a_histo_last_seen_max and histo_higher == hist_of_b_max:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2)
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1)
+            make_copy_last_seen = True
+          elif histo_last_seen_higher == b_histo_last_seen_max and histo_higher == hist_of_b_max:
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2)
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1)
+            make_copy_last_seen = True
           else:
-            print("problem")
+            print("nothing")
+            update_counter = update_counter - 1  
+
+            
+            
+          
+          #similarity_acurrent_aaverage = cv2.compareHist(hist_of_a, a_histo_last_seen, cv2.HISTCMP_CHISQR)          
+          #similarity_acurrent_baverage = cv2.compareHist(hist_of_a, b_histo_last_seen, cv2.HISTCMP_CHISQR) 
+          #similarity_bcurrent_aaverage = cv2.compareHist(hist_of_b, a_histo_last_seen, cv2.HISTCMP_CHISQR)               
+          #similarity_bcurrent_baverage = cv2.compareHist(hist_of_b, b_histo_last_seen, cv2.HISTCMP_CHISQR)
+          
+          #print(similarity_acurrent_aaverage)
+          #print(similarity_acurrent_baverage)
+          #print(similarity_bcurrent_aaverage)
+          #print(similarity_bcurrent_baverage)
+          hist_of_a = hist_of_a - hist_of_b
+          plt.subplot(2, 2, 1) # row 1, col 2 index 1
+          plt.plot(hist_of_a, color='r', label="h")          
+
+          hist_of_b = hist_of_b - hist_of_a
+          plt.subplot(2, 2, 2) # index 2
+          plt.plot(hist_of_b, color='g', label="h")
+          
+          a_histo_last_seen - a_histo_last_seen - b_histo_last_seen
+          plt.subplot(2, 2, 3) # index 2
+          plt.plot(a_histo_last_seen, color='b', label="h")
+          
+          b_histo_last_seen = b_histo_last_seen - a_histo_last_seen
+          plt.subplot(2, 2, 4) # index 2
+          plt.plot(b_histo_last_seen, color='r', label="h")
+          
+          
+          plt.show()
+                  
+       
+          
+                   
+          '''if (similarity_acurrent_aaverage > similarity_acurrent_baverage) and (similarity_bcurrent_aaverage < similarity_bcurrent_baverage):
+              dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
+              dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
+              make_copy_last_seen = True
+              
+                              
+          elif (similarity_acurrent_aaverage < similarity_acurrent_baverage) and (similarity_bcurrent_aaverage > similarity_bcurrent_baverage):
+              dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
+              dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
+              make_copy_last_seen = True
+              
+              
+          else:
+            print("problem")'''
+           
+
+            
               
           
-        if update_counter >= 90:
-          previous_histograms = histograms.copy() 
+        if update_counter >= 60:
+          previous_histograms = histograms.copy()
+           
                    
           
           
