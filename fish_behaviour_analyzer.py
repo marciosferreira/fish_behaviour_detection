@@ -8,7 +8,7 @@ quad_D = 1
 quad_D_count = 0
 update_counter = 62
 import matplotlib.pyplot as plt 
-
+import imutils
 fish_0_history = []
 fish_1_history = []
 make_copy_last_seen = True
@@ -31,20 +31,15 @@ previous_id_fish_local = []
 
 histograms_ids = ['nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan']
 
-cv2.imshow('background' , bw_back)
+#cv2.imshow('background' , bw_back)
 
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
   print("Error opening video stream or file")
 
 # Read until video is completed
-<<<<<<< Updated upstream
-for idx_frame in range(6000,10000000):   #3000 to 4000
+for idx_frame in range(6700,10000000,10):   #3000 to 4000
   #print(idx_frame)
-=======
-for idx_frame in range(6700,10000000):   #3000 to 4000
-  print(idx_frame)
->>>>>>> Stashed changes
     
   
   cap.set(1, idx_frame)
@@ -53,9 +48,13 @@ for idx_frame in range(6700,10000000):   #3000 to 4000
   ret, frame = cap.read()
   if ret == True:
 
-    cv2.imshow('Main' , frame)
+    imzz = cv2.resize(frame, (780, 780))              # Resize image   
+    cv2.imshow('Main',imzz)
+    cv2.waitKey(1)
+     
     
     
+    original_img = frame.copy()
 
     # Display the resulting frame
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -85,130 +84,173 @@ for idx_frame in range(6700,10000000):   #3000 to 4000
 
     counter = 0
     
-    for idx, cnt in enumerate(contours):      
-        area = cv2.contourArea(cnt)        
+    for idx, cnt in enumerate(contours):
+      
+      if idx_frame == 6700 and idx == 0:      
+        leftmost = tuple(cnt[cnt[:,:,0].argmin()][0])
+        rightmost = tuple(cnt[cnt[:,:,0].argmax()][0])
+        topmost = tuple(cnt[cnt[:,:,1].argmin()][0])
+        bottommost = tuple(cnt[cnt[:,:,1].argmax()][0])
+        rightmost = tuple(cnt[cnt[:,:,0].argmax()][0])
+        #original_img = frame.copy()
+        #mask3 = cv2.drawContours(template, [cnt], -1, color=(255,255,255),thickness=-1)   
+        template = frame[topmost[1]-20:bottommost[1]+20, leftmost[0]-20:rightmost[0]+20]  
+
+            
+      area = cv2.contourArea(cnt)        
 
 
-        if area > 100 and area < 1500:          
-          
-          image = frame 
-          mask = np.zeros(image.shape, dtype=np.uint8)
-          mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
-          result1 = cv2.bitwise_and(image, mask)
-          hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
-          h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
-          hist_final = cv2.calcHist([h],[0],None,[256],[0,256])
-          hist_final = hist_final[1:70]
-          
-          #plt.subplot(2, 2, 1) # row 1, col 2 index 1
-          #plt.plot(hist_final, color='r', label="h")          
-          #plt.title('v')
-
-          #plt.subplot(2, 2, 2) # index 2
-          #plt.plot(hist_final, color='r', label="h")
-          #plt.show()
-          
-          
-          
-          
-          #will be used to predict the size of the fish excluding the tail part
-          fish_total_pixels = len(cnt)
-
-          area = cv2.contourArea(cnt)
-
-
-          #to define in which quadrant the fish belongs to
-          M = cv2.moments(cnt)
-          cX = int(M["m10"] / M["m00"])
-          cY = int(M["m01"] / M["m00"]) 
-
-          # determine the most extreme points along the contour
-          extLeft = tuple(cnt[cnt[:, :, 0].argmin()][0])
-          extRight = tuple(cnt[cnt[:, :, 0].argmax()][0])
-          extTop = tuple(cnt[cnt[:, :, 1].argmin()][0])
-          extBot = tuple(cnt[cnt[:, :, 1].argmax()][0])
-          list_of_points = [extLeft, extRight, extTop, extBot]
-
-          #calculate the tail by discovering the fartherst point from center of mass of fish
-          distances_tail = []  
-          for l in list_of_points:                     
-            distance = math.sqrt(   (cX-l[0])**2 + (cY-l[1])**2    )
-            distances_tail.append(distance)
-
-          max_value = max(distances_tail)
-          max_index_tail = distances_tail.index(max_value)
-
-          #discovering the head by calculating the fartherst point from tail
-          distances_head = []
-          for l in cnt:
-                   
-            distance = math.sqrt(   (l[0][0]-list_of_points[max_index_tail][0])**2 + (l[0][1]-list_of_points[max_index_tail][1])**2    )
-            distances_head.append(distance)
-
-          max_value = max(distances_head)
-          max_index_head = distances_head.index(max_value)
-
-          arr = np.array(distances_head)
-          arr = arr.argsort()[-10:][::-1]
-          list_final = arr.tolist()
-     
-
-          farthest_values = []
-          for d in list_final:
-            list_value = cnt[d].tolist()              
-            farthest_values.append(list_value)
-
-          arr = np.array(farthest_values)
-          aver_head = np.mean(arr, axis=0).astype(int)
-          aver_head = (aver_head[0][0], aver_head[0][1])
+      if area > 100 and area < 1500:
+        for i in range(1,361):            
+          rotated_template = imutils.rotate_bound(template, i)
+          black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0))
+          # set those pixels to white
+          rotated_template[black_pixels] = [200, 202, 199]           
+          #cv2.imshow("cut", original_img[450:,450:] )
+          #cv2.waitKey(1)
+          #z = np.zeros((420,50,3), dtype=original_img.dtype)
+          z = np.full((420, 50,3), 255, dtype=original_img.dtype)
+          result = original_img[450:,450:]
+          result = np.append(result, z, axis=1)
+          imzzz = cv2.resize(result, (780, 780))              # Resize image   
+          cv2.imshow('res',imzzz) 
+          print(result.shape)           
+          result = cv2.matchTemplate(result, rotated_template, cv2.TM_CCOEFF)
+          (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(result)
+          (startX, startY) = maxLoc
+          endX = startX + rotated_template.shape[1]
+          endY = startY + rotated_template.shape[0]              
+          if maxVal > 3000000:                
+            final_img = cv2.rectangle(original_img, (startX, startY), (endX, endY), (255, 0, 0), 3)
+            imzz = cv2.resize(final_img, (780, 780))              # Resize image   
+            cv2.imshow('Main',imzz)
+            cv2.waitKey(1)
+            print(idx)
+            print(maxVal)
+            #qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqcv2.waitKey(0)
+       
 
 
-          #calculate the center of mass of the fish excluding the tail
-          distances_cm = []
-          for j in cnt:
-                   
-            #append distances betwen head and each point of the fish
-            distance = math.sqrt(   (j[0][0]-int(aver_head[0]))**2 + (j[0][1]-int(aver_head[1]))**2    )
-            distances_cm.append(distance)            
-
-          slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.8)]                   
-          
-          nearests_values = []
-          for e in slowest_indices:
-            list_value_cm = cnt[e].tolist()              
-            nearests_values.append(list_value_cm)
-
-          arr = np.array(nearests_values)
-          aver_cm = np.mean(arr, axis=0).astype(int)        
-
-          fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
 
         
-          if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
-            quadrant_value = "A"
-          elif (aver_cm[0][0] < 427 and aver_cm[0][1] > 417):
-            quadrant_value = "B"
-          elif (aver_cm[0][0] > 427 and aver_cm[0][1] < 417):
-            quadrant_value = "C"
-          else:
-            quadrant_value = "D"       
+        image = frame 
+        mask = np.zeros(image.shape, dtype=np.uint8)
+        mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
+        result1 = cv2.bitwise_and(image, mask)
+        hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
+        h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
+        hist_final = cv2.calcHist([h],[0],None,[256],[0,256])
+        hist_final = hist_final[1:70]
+        
+        #plt.subplot(2, 2, 1) # row 1, col 2 index 1
+        #plt.plot(hist_final, color='r', label="h")          
+        #plt.title('v')
+
+        #plt.subplot(2, 2, 2) # index 2
+        #plt.plot(hist_final, color='r', label="h")
+        #plt.show()
+        
+        
+        
+        
+        #will be used to predict the size of the fish excluding the tail part
+        fish_total_pixels = len(cnt)
+
+        area = cv2.contourArea(cnt)
+
+
+        #to define in which quadrant the fish belongs to
+        M = cv2.moments(cnt)
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"]) 
+
+        # determine the most extreme points along the contour
+        extLeft = tuple(cnt[cnt[:, :, 0].argmin()][0])
+        extRight = tuple(cnt[cnt[:, :, 0].argmax()][0])
+        extTop = tuple(cnt[cnt[:, :, 1].argmin()][0])
+        extBot = tuple(cnt[cnt[:, :, 1].argmax()][0])
+        list_of_points = [extLeft, extRight, extTop, extBot]
+
+        #calculate the tail by discovering the fartherst point from center of mass of fish
+        distances_tail = []  
+        for l in list_of_points:                     
+          distance = math.sqrt(   (cX-l[0])**2 + (cY-l[1])**2    )
+          distances_tail.append(distance)
+
+        max_value = max(distances_tail)
+        max_index_tail = distances_tail.index(max_value)
+
+        #discovering the head by calculating the fartherst point from tail
+        distances_head = []
+        for l in cnt:
+                  
+          distance = math.sqrt(   (l[0][0]-list_of_points[max_index_tail][0])**2 + (l[0][1]-list_of_points[max_index_tail][1])**2    )
+          distances_head.append(distance)
+
+        max_value = max(distances_head)
+        max_index_head = distances_head.index(max_value)
+
+        arr = np.array(distances_head)
+        arr = arr.argsort()[-10:][::-1]
+        list_final = arr.tolist()
+    
+
+        farthest_values = []
+        for d in list_final:
+          list_value = cnt[d].tolist()              
+          farthest_values.append(list_value)
+
+        arr = np.array(farthest_values)
+        aver_head = np.mean(arr, axis=0).astype(int)
+        aver_head = (aver_head[0][0], aver_head[0][1])
+
+
+        #calculate the center of mass of the fish excluding the tail
+        distances_cm = []
+        for j in cnt:
+                  
+          #append distances betwen head and each point of the fish
+          distance = math.sqrt(   (j[0][0]-int(aver_head[0]))**2 + (j[0][1]-int(aver_head[1]))**2    )
+          distances_cm.append(distance)            
+
+        slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.8)]                   
+        
+        nearests_values = []
+        for e in slowest_indices:
+          list_value_cm = cnt[e].tolist()              
+          nearests_values.append(list_value_cm)
+
+        arr = np.array(nearests_values)
+        aver_cm = np.mean(arr, axis=0).astype(int)        
+
+        fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
+
+      
+        if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
+          quadrant_value = "A"
+        elif (aver_cm[0][0] < 427 and aver_cm[0][1] > 417):
+          quadrant_value = "B"
+        elif (aver_cm[0][0] > 427 and aver_cm[0][1] < 417):
+          quadrant_value = "C"
+        else:
+          quadrant_value = "D"       
 
 
 
-          #store variables locally in the loop for immediate calculation purposes
-          idx_local.append(counter)          
-          lenght_of_fish_local.append(fish_pectoral_lenght)
-          position_fish_local.append((aver_cm[0][0], aver_cm[0][1]))
-          fish_tail_local.append(list_of_points[max_index_tail])
-          fish_head_local.append(aver_head)
-          quadrant_local.append(quadrant_value)
-          fish_area.append(area)
-          histograms.append(hist_final)
-          
-          
-          
-                       
-          counter +=1
+        #store variables locally in the loop for immediate calculation purposes
+        idx_local.append(counter)          
+        lenght_of_fish_local.append(fish_pectoral_lenght)
+        position_fish_local.append((aver_cm[0][0], aver_cm[0][1]))
+        fish_tail_local.append(list_of_points[max_index_tail])
+        fish_head_local.append(aver_head)
+        quadrant_local.append(quadrant_value)
+        fish_area.append(area)
+        histograms.append(hist_final)
+        
+        
+        
+                      
+        counter +=1
 
     
     dframe = pd.DataFrame(idx_local)
