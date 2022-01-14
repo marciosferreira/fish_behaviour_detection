@@ -38,7 +38,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(7100,10000000,1):   #3000 to 4000
+for idx_frame in range(3900,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -174,16 +174,27 @@ for idx_frame in range(7100,10000000,1):   #3000 to 4000
           distance = math.sqrt(   (j[0][0]-int(aver_head[0]))**2 + (j[0][1]-int(aver_head[1]))**2    )
           distances_cm.append(distance)            
 
-        slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.8)]                   
+        slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.8)]
+        slowest_indices_for_template = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels)]                   
         
+            
         nearests_values = []
+        nearest_values_for_template = []
+        
         for e in slowest_indices:
           list_value_cm = cnt[e].tolist()              
           nearests_values.append(list_value_cm)
 
         arr = np.array(nearests_values)
         
-        contours_body = arr
+        for e in slowest_indices_for_template:
+          if distances_cm[e] < 35:
+            list_value_cm = cnt[e].tolist()              
+            nearest_values_for_template.append(list_value_cm)
+
+        arr_for_template = np.array(nearest_values_for_template)
+        
+        contours_body = arr_for_template
         #is the nearest_values the fish without the tail?
         
         #canvas_for_body = np.zeros(frame.shape, dtype=original_img.dtype)            
@@ -441,7 +452,8 @@ for idx_frame in range(7100,10000000,1):   #3000 to 4000
           #imzzx = cv2.resize(template, (780, 780)) 
           #cv2.imshow('Image',image_ind)
           #cv2.waitKey(0)  
-          
+          cv2.imshow('image_ind_a', image_ind_a)
+
           
           
           temp_size_b = hist_of_b.shape
@@ -454,7 +466,8 @@ for idx_frame in range(7100,10000000,1):   #3000 to 4000
           row_add = np.full((50, temp_size[1], 3), 255, dtype=original_img.dtype)         
           result_3 = np.append(result_2, row_add, axis=0)
           image_ind_b = np.append(row_add, result_3, axis=0)  
-          
+          cv2.imshow('image_ind_b', image_ind_b)
+          cv2.waitKey(0)
           
           similarity_acurrent_aaverage = []
           for i in range(1,361):            
@@ -610,20 +623,30 @@ for idx_frame in range(7100,10000000,1):   #3000 to 4000
           print(similarity_bcurrent_aaverage)
           print(similarity_bcurrent_baverage)
           
-          first = abs(similarity_acurrent_aaverage - similarity_acurrent_baverage)
-          second = abs(similarity_bcurrent_aaverage-similarity_bcurrent_baverage)
+          simil_list = [similarity_acurrent_aaverage, similarity_acurrent_baverage, similarity_bcurrent_aaverage, similarity_bcurrent_baverage]
+          max_simil = max(simil_list)
+          print(max_simil)
           
-          if first > 0.05 or second > 0.05:
-            if first > second: 
-                      
-              if (similarity_acurrent_aaverage > similarity_acurrent_baverage):
-                  dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
-                  dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
-                  make_copy_last_seen = True
-              else:
-                dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-                dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
-                make_copy_last_seen = True
+          if max_simil == similarity_acurrent_aaverage or max_simil == similarity_bcurrent_baverage:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
+          else:            
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
+            
+          
+                  
+                                
+          '''if (similarity_acurrent_aaverage > similarity_acurrent_baverage):
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
+            make_copy_last_seen = True
+            print('1')
+          else:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
+            make_copy_last_seen = True
+            print('2')
                 
             else:
               
@@ -632,14 +655,16 @@ for idx_frame in range(7100,10000000,1):   #3000 to 4000
               if similarity_bcurrent_aaverage > similarity_bcurrent_baverage:
                 dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
                 dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
-                make_copy_last_seen = True                             
+                make_copy_last_seen = True 
+                print('1')                            
               else:
+                print('2')
                 dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
                 dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
                 make_copy_last_seen = True
           
-          else:
-            update_counter -= 1
+          #else:
+            #update_counter -= 1'''
                   
                           
               
