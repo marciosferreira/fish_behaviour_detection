@@ -1,4 +1,4 @@
-quadr = 'B'
+quadr = 'D'
 import cv2
 import numpy as np
 import math
@@ -190,7 +190,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         arr = np.array(nearests_values)
         
         for e in slowest_indices_for_template:
-          if distances_cm[e] < 35:
+          if distances_cm[e] < 20:
             list_value_cm = cnt[e].tolist()              
             nearest_values_for_template.append(list_value_cm)
 
@@ -198,65 +198,22 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         
         contours_body = arr_for_template
         
-        #rotated_template = imutils.rotate_bound(contours_body, 90)
-
-        #is the nearest_values the fish without the tail?
+        # determine the most extreme points along the contour of the tail cropped fish
+        extLeft = tuple(contours_body[contours_body[:, :, 0].argmin()][0])
+        extRight = tuple(contours_body[contours_body[:, :, 0].argmax()][0])
+        extTop = tuple(contours_body[contours_body[:, :, 1].argmin()][0])
+        extBot = tuple(contours_body[contours_body[:, :, 1].argmax()][0])
+        #list_of_points = [extLeft, extRight, extTop, extBot]
+        print(extLeft)
+        copy_frame = original_img.copy()
+        copy_frame[:extTop[1], :, :] = 255
+        copy_frame[extBot[1]:, :, :] = 255
+        copy_frame[:, :extLeft[0], :] = 255
+        copy_frame[:, extRight[0]:, :] = 255
         
-        canvas_for_body = np.zeros(frame.shape, dtype=original_img.dtype)            
-        mask_template_body = cv2.drawContours(canvas_for_body, [contours_body], -1, color=(255,255,255),thickness=-1)
+      
         
-        mask_template_body = cv2.GaussianBlur(mask_template_body, (3,3) ,0)
-        
-        
-        #kernel = np.ones((7, 7), np.uint8)
-  
-        # Using cv2.erode() method 
-        #mask_template_body = cv2.erode(mask_template_body, kernel) 
-
-        #bw_body_img = cv2.cvtColor(mask_template_body, cv2.COLOR_BGR2GRAY)               
-        ret,thresh = cv2.threshold(mask_template_body,15,255,cv2.THRESH_BINARY)
-        
-    
-        
-        mask_template_cut = cv2.bitwise_and(frame, thresh)
-        black_pixels = np.where((mask_template_cut[:, :, 0] == 0) & (mask_template_cut[:, :, 1] == 0) & (mask_template_cut[:, :, 2] == 0)) 
-        mask_template_cut[black_pixels] = [200, 202, 199]            
-        
-        
-        #contours_body, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        #contours_body = contours_body[0]
-        leftmost = tuple(contours_body[contours_body[:,:,0].argmin()][0])
-        rightmost = tuple(contours_body[contours_body[:,:,0].argmax()][0])
-        topmost = tuple(contours_body[contours_body[:,:,1].argmin()][0])
-        bottommost = tuple(contours_body[contours_body[:,:,1].argmax()][0])
-        rightmost = tuple(contours_body[contours_body[:,:,0].argmax()][0])
-        #canvas = np.zeros(frame.shape, dtype=original_img.dtype)        
-        #canvas = np.zeros((bottommost-topmost+40, rightmost-leftmost+40, 3), dtype=original_img.dtype)
-        #mask_template = cv2.drawContours(canvas, [contours_body], -1, color=(255,255,255),thickness=-1)          
-        #mask_template_cut = cv2.bitwise_and(frame, mask_template)
-        #black_pixels = np.where((mask_template_cut[:, :, 0] == 0) & (mask_template_cut[:, :, 1] == 0) & (mask_template_cut[:, :, 2] == 0))
-        # set those pixels to white based on Boolean mask
-        #mask_template_cut[black_pixels] = [255, 255, 255] #[200, 202, 199]    
-        #original_img = frame.copy()
-        #mask3 = cv2.drawContours(template, [cnt], -1, color=(255,255,255),thickness=-1)   
-        template = frame[topmost[1]:bottommost[1], leftmost[0]:rightmost[0]]
-        
-       
-        #imzzx = cv2.resize(template, (780, 780)) 
-        #cv2.imshow('template',template)
-        #mask_template_body_final = cv2.drawContours(canvas_for_body, contours_b, -1, color=(0,255,0),thickness=-1)
-        #print(len(contours_b))
-        #imzzxx = cv2.resize(mask_template_body_final, (780, 780))
-        #cv2.imshow("testatando", imzzxx)
-        #cv2.waitKey(0) 
-        
-        
-        #mask_template_body_final = cv2.drawContours(canvas_for_body, [contours[0][0]], -1, color=(0,255,0),thickness=-1)
-
-        #imzzxx = cv2.resize(mask_template_body_final, (780, 780))
-        #cv2.imshow("testatando", imzzxx)
-        #cv2.waitKey(0)     
-        
+        #calculate the angle and rotate the black masked image
         aver_cm = np.mean(arr, axis=0).astype(int)
         
         #fish_center of mass
@@ -282,72 +239,47 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         print("degre")
         print(mydegrees)
         
-        cv2.imshow("antes", mask_template_cut)
+        
         from PIL import Image
-        im_pil = Image.fromarray(mask_template_cut)
+        im_pil = Image.fromarray(copy_frame)
         #rotated = im_pil.rotate(, expand=True)
         rotated =  im_pil.rotate(mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
 
+        rotated_template = np.asarray(rotated)
+              
+       
         
         #rotated_template = im_pil.rotate(-mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)))
 
-        rotated_template = np.asarray(rotated)
-        #cv2.imshow("depois", rotated_template)
-        #cv2.waitKey(0)
-
         
+        bw_back_rt = cv2.cvtColor(rotated_template, cv2.COLOR_BGR2GRAY)
         
-        #rotated_template = imutils.rotate_bound(mask_template_cut, -mydegrees)
-        
-        #black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0)) 
-        #rotated_template[black_pixels] = [200, 202, 199]
-        
-        bw_mainImage = cv2.cvtColor(rotated_template, cv2.COLOR_BGR2GRAY)
-        #bw_mainImage = bw_mainImage[:870,:848]
-        #bw_mainImage = cv2.GaussianBlur(rotated_template, (9,9) ,0)
    
-        new_background = np.full((rotated_template.shape), [200, 202, 199], dtype=original_img.dtype)
-        new_background = cv2.cvtColor(new_background, cv2.COLOR_BGR2GRAY)
+        ret,thresh = cv2.threshold(bw_back_rt,150, 255,cv2.THRESH_BINARY)
+        
+        thresh = thresh.clip(max=1)
+        
+        inverted =1-thresh
+        
+        #coords = np.argwhere(thresh)
+        mask2 = np.argwhere(inverted)
+        
+        x0, y0 = mask2.min(axis=0)
+        x1, y1 = mask2.max(axis=0) + 1   # slices are exclusive at the top
+        
+        
+        
+                
+        #before apply the cut coordinates, grab a rotated main image
+        im_pil = Image.fromarray(original_img.copy())
+        rotated_original =  im_pil.rotate(mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
+        rotated_original = np.asarray(rotated_original)
 
+        
+        final_template = rotated_original[x0:x1, y0:y1, :]
 
-        diff = cv2.absdiff(new_background, bw_mainImage)              
-        ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)
-        contoursx, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         
-        mask_black = np.zeros(thresh.shape, dtype=original_img.dtype)
         
-        #print(contours)
-        mask_template_body = cv2.drawContours(mask_black, [contoursx[0]], -1, color=(255,0,0),thickness=-1)
-        
-        leftmost = tuple(contoursx[0][contoursx[0][:,:,0].argmin()][0])
-        rightmost = tuple(contoursx[0][contoursx[0][:,:,0].argmax()][0])
-        topmost = tuple(contoursx[0][contoursx[0][:,:,1].argmin()][0])
-        bottommost = tuple(contoursx[0][contoursx[0][:,:,1].argmax()][0])
-        rightmost = tuple(contoursx[0][contoursx[0][:,:,0].argmax()][0])
-        #print(leftmost)
-        rotated_template = rotated_template[topmost[1]:bottommost[1], leftmost[0]:rightmost[0]]          
-        #print("ccccccccccccccc")
-        #print(contours)
-       
-        #final_template = mask
-        #imS = cv2.resize(rotated_template, (700, 700))
-        #cv2.imshow("tttx",rotated_template )
-        #cv2.waitKey(0)
-      
-        #y_nonzero, x_nonzero, _ = np.nonzero(rotated_template)
-        #final_template = rotated_template[np.min(y_nonzero):np.max(y_nonzero), np.min(x_nonzero):np.max(x_nonzero)]
-        
-        #black_pixels = np.where((final_template[:, :, 0] == 0) & (final_template[:, :, 1] == 0) & (final_template[:, :, 2] == 0))
-        #black_pixels1 = np.where((final_template[:, :, 0] == 1) & (final_template[:, :, 1] == 1) & (final_template[:, :, 2] == 1))
-
-        # set those pixels to white based on Boolean mask
-        #final_template[black_pixels] = [200, 202, 199]
-        #final_template[black_pixels1] = [200, 202, 199]   
-   
-  
-        #cv2.imshow("iiii", final_template)
-        #print(mydegrees)
-        #cv2.waitKey(0)
         
         
         
@@ -379,7 +311,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)
-        histograms.append(rotated_template)   # need to fix afterwards
+        histograms.append(final_template)   # need to fix afterwards
         countours_idx.append(idx)
         
         
@@ -543,7 +475,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           from PIL import Image
           #rotated_template = imutils.rotate_bound(a_histo_last_seen, 0)
           im_pil = Image.fromarray(a_histo_last_seen)
-          hash1 = imagehash.colorhash(im_pil, 2)
+          hash1 = imagehash.colorhash(im_pil, 4)
           print(hash1)
           cv2.imshow('a_histo_last_seen',a_histo_last_seen)
 
@@ -563,7 +495,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           b_histo_last_seen = np.append(row_add, result_3, axis=0)'''
           #rotated_template = imutils.rotate_bound(b_histo_last_seen, 0)
           im_pil = Image.fromarray(b_histo_last_seen)
-          hash2 = imagehash.colorhash(im_pil, 2)
+          hash2 = imagehash.colorhash(im_pil, 4)
           print(hash2)
           cv2.imshow('b_histo_last_seen', b_histo_last_seen)
 
@@ -592,7 +524,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           #cv2.waitKey(0)
           #rotated_template = imutils.rotate_bound(hist_of_a, 0)
           im_pil = Image.fromarray(hist_of_a)
-          hash3 = imagehash.colorhash(im_pil, 2)
+          hash3 = imagehash.colorhash(im_pil, 4)
           print(hash3)            
           cv2.imshow('hist_of_a', hist_of_a)
           
@@ -614,7 +546,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           image_ind_b[white_pixels] = [212, 212, 209]   '''   
           
           im_pil = Image.fromarray(hist_of_b)
-          hash4 = imagehash.colorhash(im_pil, 2) # p = 12,  crop, color, whash(im_pil, mode='db4')
+          hash4 = imagehash.colorhash(im_pil, 4) # p = 12,  crop, color, whash(im_pil, mode='db4')
           print(hash4)            
           cv2.imshow('hist_of_b', hist_of_b)
           
@@ -632,6 +564,8 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           
 
           cv2.waitKey(0)
+          
+          cv2.destroyAllWindows() 
           
           update_counter = update_counter -1
        
