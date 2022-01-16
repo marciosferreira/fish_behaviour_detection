@@ -38,7 +38,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(3900,10000000,1):   #3000 to 4000
+for idx_frame in range(7580,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -163,6 +163,8 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
 
         arr = np.array(farthest_values)
         aver_head = np.mean(arr, axis=0).astype(int)
+        
+        #the head coordinates
         aver_head = (aver_head[0][0], aver_head[0][1])
 
 
@@ -195,15 +197,32 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
         arr_for_template = np.array(nearest_values_for_template)
         
         contours_body = arr_for_template
+        
+        #rotated_template = imutils.rotate_bound(contours_body, 90)
+
         #is the nearest_values the fish without the tail?
         
-        #canvas_for_body = np.zeros(frame.shape, dtype=original_img.dtype)            
-        #mask_template_body = cv2.drawContours(canvas_for_body, [arr], -1, color=(255,255,255),thickness=-1)
-        #mask_template_body = cv2.GaussianBlur(mask_template_body, (1,1) ,0)
+        canvas_for_body = np.zeros(frame.shape, dtype=original_img.dtype)            
+        mask_template_body = cv2.drawContours(canvas_for_body, [contours_body], -1, color=(255,255,255),thickness=-1)
+        
+        mask_template_body = cv2.GaussianBlur(mask_template_body, (3,3) ,0)
+        
+        
+        #kernel = np.ones((7, 7), np.uint8)
+  
+        # Using cv2.erode() method 
+        #mask_template_body = cv2.erode(mask_template_body, kernel) 
 
         #bw_body_img = cv2.cvtColor(mask_template_body, cv2.COLOR_BGR2GRAY)               
-        #ret,thresh = cv2.threshold(bw_body_img,15,255,cv2.THRESH_BINARY)            
-                
+        ret,thresh = cv2.threshold(mask_template_body,15,255,cv2.THRESH_BINARY)
+        
+    
+        
+        mask_template_cut = cv2.bitwise_and(frame, thresh)
+        black_pixels = np.where((mask_template_cut[:, :, 0] == 0) & (mask_template_cut[:, :, 1] == 0) & (mask_template_cut[:, :, 2] == 0)) 
+        mask_template_cut[black_pixels] = [200, 202, 199]            
+        
+        
         #contours_body, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         #contours_body = contours_body[0]
         leftmost = tuple(contours_body[contours_body[:,:,0].argmin()][0])
@@ -238,7 +257,105 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
         #cv2.imshow("testatando", imzzxx)
         #cv2.waitKey(0)     
         
-        aver_cm = np.mean(arr, axis=0).astype(int)        
+        aver_cm = np.mean(arr, axis=0).astype(int)
+        
+        #fish_center of mass
+        fish_COM = (aver_cm[0][0], aver_cm[0][1])
+        
+        
+        #create a fake y axis, as in images, the y is inverted
+    
+        
+        inverted_aver_head = (aver_head[0], frame.shape[0] - aver_head[1]) 
+        inverted_fish_COM = (fish_COM[0], frame.shape[0] - fish_COM[1])
+
+                
+        p1 = inverted_aver_head
+        p2 = inverted_fish_COM
+        
+        print(inverted_aver_head)
+        print(inverted_fish_COM)
+                # Difference in x coordinates
+        myradians = math.atan2(p1[0]-p2[0], p1[1]-p2[1])
+        mydegrees = math.degrees(myradians)
+        
+        print("degre")
+        print(mydegrees)
+        
+        cv2.imshow("antes", mask_template_cut)
+        from PIL import Image
+        im_pil = Image.fromarray(mask_template_cut)
+        #rotated = im_pil.rotate(, expand=True)
+        rotated =  im_pil.rotate(mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
+
+        
+        #rotated_template = im_pil.rotate(-mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)))
+
+        rotated_template = np.asarray(rotated)
+        #cv2.imshow("depois", rotated_template)
+        #cv2.waitKey(0)
+
+        
+        
+        #rotated_template = imutils.rotate_bound(mask_template_cut, -mydegrees)
+        
+        #black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0)) 
+        #rotated_template[black_pixels] = [200, 202, 199]
+        
+        bw_mainImage = cv2.cvtColor(rotated_template, cv2.COLOR_BGR2GRAY)
+        #bw_mainImage = bw_mainImage[:870,:848]
+        #bw_mainImage = cv2.GaussianBlur(rotated_template, (9,9) ,0)
+   
+        new_background = np.full((rotated_template.shape), [200, 202, 199], dtype=original_img.dtype)
+        new_background = cv2.cvtColor(new_background, cv2.COLOR_BGR2GRAY)
+
+
+        diff = cv2.absdiff(new_background, bw_mainImage)              
+        ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)
+        contoursx, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        
+        mask_black = np.zeros(thresh.shape, dtype=original_img.dtype)
+        
+        #print(contours)
+        mask_template_body = cv2.drawContours(mask_black, [contoursx[0]], -1, color=(255,0,0),thickness=-1)
+        
+        leftmost = tuple(contoursx[0][contoursx[0][:,:,0].argmin()][0])
+        rightmost = tuple(contoursx[0][contoursx[0][:,:,0].argmax()][0])
+        topmost = tuple(contoursx[0][contoursx[0][:,:,1].argmin()][0])
+        bottommost = tuple(contoursx[0][contoursx[0][:,:,1].argmax()][0])
+        rightmost = tuple(contoursx[0][contoursx[0][:,:,0].argmax()][0])
+        #print(leftmost)
+        rotated_template = rotated_template[topmost[1]:bottommost[1], leftmost[0]:rightmost[0]]          
+        #print("ccccccccccccccc")
+        #print(contours)
+       
+        #final_template = mask
+        #imS = cv2.resize(rotated_template, (700, 700))
+        #cv2.imshow("tttx",rotated_template )
+        #cv2.waitKey(0)
+      
+        #y_nonzero, x_nonzero, _ = np.nonzero(rotated_template)
+        #final_template = rotated_template[np.min(y_nonzero):np.max(y_nonzero), np.min(x_nonzero):np.max(x_nonzero)]
+        
+        #black_pixels = np.where((final_template[:, :, 0] == 0) & (final_template[:, :, 1] == 0) & (final_template[:, :, 2] == 0))
+        #black_pixels1 = np.where((final_template[:, :, 0] == 1) & (final_template[:, :, 1] == 1) & (final_template[:, :, 2] == 1))
+
+        # set those pixels to white based on Boolean mask
+        #final_template[black_pixels] = [200, 202, 199]
+        #final_template[black_pixels1] = [200, 202, 199]   
+   
+  
+        #cv2.imshow("iiii", final_template)
+        #print(mydegrees)
+        #cv2.waitKey(0)
+        
+        
+        
+        
+        
+        
+        
+                
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
 
@@ -257,12 +374,12 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
         #store variables locally in the loop for immediate calculation purposes
         idx_local.append(counter)          
         lenght_of_fish_local.append(fish_pectoral_lenght)
-        position_fish_local.append((aver_cm[0][0], aver_cm[0][1]))
+        position_fish_local.append(fish_COM)
         fish_tail_local.append(list_of_points[max_index_tail])
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)
-        histograms.append(template)   # need to fix afterwards
+        histograms.append(rotated_template)   # need to fix afterwards
         countours_idx.append(idx)
         
         
@@ -391,10 +508,11 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
         
         # here we decide which fish is 1 and 2 based on X and Y
         if update_counter == 2:
-          #print(dframe)                   
+          
           current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
           current_fish_a = current_fish.iloc[0]
           current_fish_b = current_fish.iloc[1]
+          
           
           current_fish_a_id = current_fish_a['fish_id']
           hist_of_a = histograms_X_Y[current_fish_a_id]
@@ -404,9 +522,11 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
                   
           #hist_X = histograms_X_Y['X']    
           #hist_Y = histograms_X_Y['Y']
-                      
+          
+          
+                
           a_histo_last_seen = histograms_ids[1]
-          cv2.imshow('a_histo_last_seen',a_histo_last_seen)
+          #a_histo_last_seen = imutils.rotate_bound(a_histo_last_seen, 90)          
           #cv2.waitKey(0)  #need to be fixed to be dinamic
           '''temp_size_a = a_histo_last_seen.shape
           colum_add = np.full((temp_size_a[0], 100, 3), 255, dtype=original_img.dtype)
@@ -416,13 +536,20 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
           result_2 = np.append(colum_add, result_1, axis=1)          
           temp_size = result_2.shape
           row_add = np.full((100, temp_size[1], 3), 255, dtype=original_img.dtype)         
+          
           result_3 = np.append(result_2, row_add, axis=0)
           a_histo_last_seen = np.append(row_add, result_3, axis=0)  '''
-          
+          import imagehash
+          from PIL import Image
+          #rotated_template = imutils.rotate_bound(a_histo_last_seen, 0)
+          im_pil = Image.fromarray(a_histo_last_seen)
+          hash1 = imagehash.colorhash(im_pil, 2)
+          print(hash1)
+          cv2.imshow('a_histo_last_seen',a_histo_last_seen)
+
           
                       
           b_histo_last_seen = histograms_ids[2]    #need to be fixed to be dinamic
-          cv2.imshow('b_histo_last_seen', b_histo_last_seen)
           #cv2.waitKey(0)  #need to be fixed to be dinamic
           '''temp_size_a = b_histo_last_seen.shape
           colum_add = np.full((temp_size_a[0], 5, 3), 255, dtype=original_img.dtype)
@@ -434,205 +561,92 @@ for idx_frame in range(3900,10000000,1):   #3000 to 4000
           row_add = np.full((5, temp_size[1], 3), 255, dtype=original_img.dtype)         
           result_3 = np.append(result_2, row_add, axis=0)
           b_histo_last_seen = np.append(row_add, result_3, axis=0)'''
-       
+          #rotated_template = imutils.rotate_bound(b_histo_last_seen, 0)
+          im_pil = Image.fromarray(b_histo_last_seen)
+          hash2 = imagehash.colorhash(im_pil, 2)
+          print(hash2)
+          cv2.imshow('b_histo_last_seen', b_histo_last_seen)
+
           
                     
-          temp_size_a = hist_of_a.shape
-          colum_add = np.full((temp_size_a[0], 50, 3), 255, dtype=original_img.dtype)
+          #temp_size_a = hist_of_a.shape
+          
+      
+          
+          #colum_add = np.full((temp_size_a[0], 50, 3), 255, dtype=original_img.dtype)
           #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
           #cropped_img = original_img[450:,450:]
-          result_1 = np.append(hist_of_a, colum_add, axis=1)
+          '''result_1 = np.append(hist_of_a, colum_add, axis=1)
           result_2 = np.append(colum_add, result_1, axis=1)          
           temp_size = result_2.shape
           row_add = np.full((50, temp_size[1], 3), 255, dtype=original_img.dtype)         
           result_3 = np.append(result_2, row_add, axis=0)
           image_ind_a = np.append(row_add, result_3, axis=0)
+          white_pixels = np.where((image_ind_a[:, :, 0] == 255) & (image_ind_a[:, :, 1] == 255) & (image_ind_a[:, :, 2] == 255))
+          # set those pixels to white
+          image_ind_a[white_pixels] = [212, 212, 209] '''     
           #cv2.imshow('fff', image_ind_a)
           #cv2.waitKey(0)  
           #imzzx = cv2.resize(template, (780, 780)) 
           #cv2.imshow('Image',image_ind)
-          #cv2.waitKey(0)  
-          cv2.imshow('image_ind_a', image_ind_a)
+          #cv2.waitKey(0)
+          #rotated_template = imutils.rotate_bound(hist_of_a, 0)
+          im_pil = Image.fromarray(hist_of_a)
+          hash3 = imagehash.colorhash(im_pil, 2)
+          print(hash3)            
+          cv2.imshow('hist_of_a', hist_of_a)
+          
+          
 
           
           
-          temp_size_b = hist_of_b.shape
-          colum_add = np.full((temp_size_b[0], 50, 3), 255, dtype=original_img.dtype)
+          #temp_size_b = hist_of_b.shape
+          #colum_add = np.full((temp_size_b[0], 50, 3), 255, dtype=original_img.dtype)
           #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
           #cropped_img = original_img[450:,450:]
-          result_1 = np.append(hist_of_b, colum_add, axis=1)
+          '''result_1 = np.append(hist_of_b, colum_add, axis=1)
           result_2 = np.append(colum_add, result_1, axis=1)          
           temp_size = result_2.shape
           row_add = np.full((50, temp_size[1], 3), 255, dtype=original_img.dtype)         
           result_3 = np.append(result_2, row_add, axis=0)
-          image_ind_b = np.append(row_add, result_3, axis=0)  
-          cv2.imshow('image_ind_b', image_ind_b)
+          image_ind_b = np.append(row_add, result_3, axis=0)
+          white_pixels = np.where((image_ind_b[:, :, 0] == 255) & (image_ind_b[:, :, 1] == 255) & (image_ind_b[:, :, 2] == 255))
+          image_ind_b[white_pixels] = [212, 212, 209]   '''   
+          
+          im_pil = Image.fromarray(hist_of_b)
+          hash4 = imagehash.colorhash(im_pil, 2) # p = 12,  crop, color, whash(im_pil, mode='db4')
+          print(hash4)            
+          cv2.imshow('hist_of_b', hist_of_b)
+          
+          print("hashs")
+          print(hash1)
+          print(hash2)
+          print(hash3)
+          print(hash4)
+          
+          
+          print(hash1-hash3)
+          print(hash1-hash4)
+          print(hash2-hash3)
+          print(hash2-hash4)
+          
+
           cv2.waitKey(0)
           
-          similarity_acurrent_aaverage = []
-          for i in range(1,361):            
-            rotated_template = imutils.rotate_bound(a_histo_last_seen, i)
-            #create a boolean mask from black pixels
-            black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0))
-            # set those pixels to white based on Boolean mask
-            rotated_template[black_pixels] = [255, 255, 255]           
-            #cv2.imshow("cut", original_img[450:,450:] )
-            #cv2.waitKey(1)
-            #z = np.zeros((420,50,3), dtype=original_img.dtype)
-               # Resize image   
-            #cv2.imshow('rotated',rotated_template) 
-            #print(result.shape)
-            #cv2.waitKey(1)       
-                     
-            result = cv2.matchTemplate(image_ind_a, rotated_template, cv2.TM_CCOEFF_NORMED)
-            (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(result)
-            (startX, startY) = maxLoc
-            endX = startX + rotated_template.shape[1]
-            endY = startY + rotated_template.shape[0]              
-                       
-            #final_img = cv2.rectangle(canvas, (startX, startY), (endX, endY), (255, 0, 0), 3)
-            #imzz = cv2.resize(final_img, (780, 780))              # Resize image   
-            #cv2.imshow('Final image',imzz)
-            #cv2.waitKey(1)
-            #print(idx)
-            #print(maxVal)
-            #if idx == 0:
-            similarity_acurrent_aaverage.append(maxVal)
-          import statistics 
+          update_counter = update_counter -1
        
-          #similarity_acurrent_aaverage.sort()
-          #similarity_acurrent_aaverage = similarity_acurrent_aaverage[-3:]
-          #similarity_acurrent_aaverage = statistics.mean(similarity_acurrent_aaverage)
-          similarity_acurrent_aaverage = max(similarity_acurrent_aaverage)
-            
-            
-          similarity_bcurrent_baverage = []
-          for i in range(1,361):            
-            rotated_template = imutils.rotate_bound(b_histo_last_seen, i)
-            #create a boolean mask from black pixels
-            black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0))
-            # set those pixels to white based on Boolean mask
-            rotated_template[black_pixels] = [255, 255, 255]           
-            #cv2.imshow("cut", original_img[450:,450:] )
-            #cv2.waitKey(1)
-            #z = np.zeros((420,50,3), dtype=original_img.dtype)
-               # Resize image   
-            #cv2.imshow('rotated',rotated_template) 
-            #print(result.shape)
-            #cv2.waitKey(1)       
-                     
-            result = cv2.matchTemplate(image_ind_b, rotated_template, cv2.TM_CCOEFF_NORMED)
-            (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(result)
-            (startX, startY) = maxLoc
-            endX = startX + rotated_template.shape[1]
-            endY = startY + rotated_template.shape[0]              
-                       
-            #final_img = cv2.rectangle(canvas, (startX, startY), (endX, endY), (255, 0, 0), 3)
-            #imzz = cv2.resize(final_img, (780, 780))              # Resize image   
-            #cv2.imshow('Final image',imzz)
-            #cv2.waitKey(1)
-            #print(idx)
-            #print(maxVal)
-            #if idx == 0:
-            similarity_bcurrent_baverage.append(maxVal)
-            
-          #similarity_bcurrent_baverage.sort() 
-          #similarity_bcurrent_baverage = similarity_bcurrent_baverage[-3:]
-          #similarity_bcurrent_baverage = statistics.mean(similarity_bcurrent_baverage)
-          similarity_bcurrent_baverage = max(similarity_bcurrent_baverage)
-     
           
           
-          similarity_acurrent_baverage = []
-          for i in range(1,361):            
-            rotated_template = imutils.rotate_bound(b_histo_last_seen, i)
-            #create a boolean mask from black pixels
-            black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0))
-            # set those pixels to white based on Boolean mask
-            rotated_template[black_pixels] = [255, 255, 255]           
-            #cv2.imshow("cut", original_img[450:,450:] )
-            #cv2.waitKey(1)
-            #z = np.zeros((420,50,3), dtype=original_img.dtype)
-               # Resize image   
-            #cv2.imshow('rotated',rotated_template) 
-            #print(result.shape)
-            #cv2.waitKey(1)       
-                     
-            result = cv2.matchTemplate(image_ind_a, rotated_template, cv2.TM_CCOEFF_NORMED)
-            (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(result)
-            (startX, startY) = maxLoc
-            endX = startX + rotated_template.shape[1]
-            endY = startY + rotated_template.shape[0]              
-                       
-            #final_img = cv2.rectangle(canvas, (startX, startY), (endX, endY), (255, 0, 0), 3)
-            #imzz = cv2.resize(final_img, (780, 780))              # Resize image   
-            #cv2.imshow('Final image',imzz)
-            #cv2.waitKey(1)
-            #print(idx)
-            #print(maxVal)
-            #if idx == 0:
-            similarity_acurrent_baverage.append(maxVal)
-            
-          #similarity_acurrent_baverage.sort()
-          #similarity_acurrent_baverage = similarity_acurrent_baverage[-3:]
-          #similarity_acurrent_baverage = statistics.mean(similarity_acurrent_baverage)
-          similarity_acurrent_baverage = max(similarity_acurrent_baverage)
-          
-          
-          
-           
-                
-          similarity_bcurrent_aaverage = []
-          for i in range(1,361):            
-            rotated_template = imutils.rotate_bound(a_histo_last_seen, i)
-            #create a boolean mask from black pixels
-            black_pixels = np.where((rotated_template[:, :, 0] == 0) & (rotated_template[:, :, 1] == 0) & (rotated_template[:, :, 2] == 0))
-            # set those pixels to white based on Boolean mask
-            rotated_template[black_pixels] = [255, 255, 255]           
-            #cv2.imshow("cut", original_img[450:,450:] )
-            #cv2.waitKey(1)
-            #z = np.zeros((420,50,3), dtype=original_img.dtype)
-               # Resize image   
-            #cv2.imshow('rotated',rotated_template) 
-            #print(result.shape)
-            #cv2.waitKey(1)       
-                     
-            result = cv2.matchTemplate(image_ind_b, rotated_template, cv2.TM_CCOEFF_NORMED)
-            (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(result)
-            (startX, startY) = maxLoc
-            endX = startX + rotated_template.shape[1]
-            endY = startY + rotated_template.shape[0]              
-                       
-            #final_img = cv2.rectangle(canvas, (startX, startY), (endX, endY), (255, 0, 0), 3)
-            #imzz = cv2.resize(final_img, (780, 780))              # Resize image   
-            #cv2.imshow('Final image',imzz)
-            #cv2.waitKey(1)
-            #print(idx)
-            #print(maxVal)
-            #if idx == 0:
-            similarity_bcurrent_aaverage.append(maxVal)
-            
-          #similarity_bcurrent_aaverage.sort()
-          #similarity_bcurrent_aaverage = similarity_bcurrent_aaverage[-3:]
-          #similarity_bcurrent_aaverage = statistics.mean(similarity_bcurrent_aaverage)
-          similarity_bcurrent_aaverage = max(similarity_bcurrent_aaverage)
-                           
-          
-          print(similarity_acurrent_aaverage)
-          print(similarity_acurrent_baverage)
-          print(similarity_bcurrent_aaverage)
-          print(similarity_bcurrent_baverage)
-          
-          simil_list = [similarity_acurrent_aaverage, similarity_acurrent_baverage, similarity_bcurrent_aaverage, similarity_bcurrent_baverage]
-          max_simil = max(simil_list)
-          print(max_simil)
-          
-          if max_simil == similarity_acurrent_aaverage or max_simil == similarity_bcurrent_baverage:
+         
+
+         
+    
+          """if max_simil == similarity_acurrent_aaverage or max_simil == similarity_bcurrent_baverage:
             dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
             dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
           else:            
             dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic"""
             
           
                   
