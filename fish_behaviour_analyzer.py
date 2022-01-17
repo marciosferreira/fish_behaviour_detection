@@ -1,14 +1,17 @@
-quadr = 'D'
+quadr = 'B'
 import cv2
+import statistics 
 import numpy as np
 import math
 import pandas as pd
+import imagehash
+from PIL import Image     
 import time
 quad_D = 1
 quad_D_count = 0
 update_counter = 23
 import matplotlib.pyplot as plt 
-import imutils
+#import imutils
 fish_0_history = []
 fish_1_history = []
 make_copy_last_seen = True
@@ -38,7 +41,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(7680,10000000,1):   #3000 to 4000
+for idx_frame in range(7870,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -255,14 +258,22 @@ for idx_frame in range(7680,10000000,1):   #3000 to 4000
         bw_back_rt = cv2.cvtColor(rotated_template, cv2.COLOR_BGR2GRAY)
         
    
-        ret,thresh = cv2.threshold(bw_back_rt,150, 255,cv2.THRESH_BINARY)
+        ret,thresh = cv2.threshold(bw_back_rt,170, 255,cv2.THRESH_BINARY)
+        
+        
+        #cv2.imshow('error', thresh)
+        #cv2.waitKey(0)
         
         thresh = thresh.clip(max=1)
         
         inverted =1-thresh
         
+       
+        
         #coords = np.argwhere(thresh)
         mask2 = np.argwhere(inverted)
+        
+      
         
         x0, y0 = mask2.min(axis=0)
         x1, y1 = mask2.max(axis=0) + 1   # slices are exclusive at the top
@@ -453,6 +464,8 @@ for idx_frame in range(7680,10000000,1):   #3000 to 4000
               
         if update_counter > 0 and update_counter < 20:
           previous_histograms_X_Y = histograms_X_Y.copy()  
+          
+          
         
         # here we decide which fish is 1 and 2 based on X and Y
         if update_counter == 20:
@@ -461,126 +474,90 @@ for idx_frame in range(7680,10000000,1):   #3000 to 4000
           current_fish_a = current_fish.iloc[0]
           current_fish_b = current_fish.iloc[1]
           
+          # recover the lists of templates to hash
+          
           
           current_fish_a_id = current_fish_a['fish_id']
-          hist_of_a = histograms_X_Y[current_fish_a_id][-1]
+          hist_of_a = histograms_X_Y[current_fish_a_id]
            
           current_fish_b_id = current_fish_b['fish_id']
-          hist_of_b = histograms_X_Y[current_fish_b_id][-1]
+          hist_of_b = histograms_X_Y[current_fish_b_id]
                   
-          #hist_X = histograms_X_Y['X']    
-          #hist_Y = histograms_X_Y['Y']
+          a_histo_last_seen = histograms_X_Y['X']    
           
+          b_histo_last_seen = histograms_X_Y['Y'] 
           
-                
-          a_histo_last_seen = histograms_X_Y['X'][-1]
-         
-          #a_histo_last_seen = imutils.rotate_bound(a_histo_last_seen, 90)          
-          #cv2.waitKey(0)  #need to be fixed to be dinamic
-          '''temp_size_a = a_histo_last_seen.shape
-          colum_add = np.full((temp_size_a[0], 100, 3), 255, dtype=original_img.dtype)
-          #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
-          #cropped_img = original_img[450:,450:]
-          result_1 = np.append(a_histo_last_seen, colum_add, axis=1)
-          result_2 = np.append(colum_add, result_1, axis=1)          
-          temp_size = result_2.shape
-          row_add = np.full((100, temp_size[1], 3), 255, dtype=original_img.dtype)         
-          
-          result_3 = np.append(result_2, row_add, axis=0)
-          a_histo_last_seen = np.append(row_add, result_3, axis=0)  '''
-          import imagehash
-          from PIL import Image
-          #rotated_template = imutils.rotate_bound(a_histo_last_seen, 0)
-          im_pil = Image.fromarray(a_histo_last_seen)
-          hash1 = imagehash.colorhash(im_pil, 4)
-          print(hash1)
-          cv2.imshow('a_histo_last_seen',a_histo_last_seen)
-
-          
-                      
-          b_histo_last_seen = histograms_X_Y['Y'][-1]    #need to be fixed to be dinamic
-          #cv2.waitKey(0)  #need to be fixed to be dinamic
-          '''temp_size_a = b_histo_last_seen.shape
-          colum_add = np.full((temp_size_a[0], 5, 3), 255, dtype=original_img.dtype)
-          #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
-          #cropped_img = original_img[450:,450:]
-          result_1 = np.append(b_histo_last_seen, colum_add, axis=1)
-          result_2 = np.append(colum_add, result_1, axis=1)          
-          temp_size = result_2.shape
-          row_add = np.full((5, temp_size[1], 3), 255, dtype=original_img.dtype)         
-          result_3 = np.append(result_2, row_add, axis=0)
-          b_histo_last_seen = np.append(row_add, result_3, axis=0)'''
-          #rotated_template = imutils.rotate_bound(b_histo_last_seen, 0)
-          im_pil = Image.fromarray(b_histo_last_seen)
-          hash2 = imagehash.colorhash(im_pil, 4)
-          print(hash2)
-          cv2.imshow('b_histo_last_seen', b_histo_last_seen)
-
-          
+            
+          ########### hash images ##########
+          main_hash = []
+          for idx_current, x in enumerate(current_fish_a_id):
+            for idx_last_seen, y in enumerate(a_histo_last_seen):
+              
+              hash_list = []
+                                                
+              im_pil = Image.fromarray(a_histo_last_seen[idx_last_seen])
+              hash1 = imagehash.whash(im_pil)
+              print(hash1)
+              cv2.imshow('a_histo_last_seen',a_histo_last_seen[idx_last_seen])                         
                     
-          #temp_size_a = hist_of_a.shape
+              im_pil = Image.fromarray(b_histo_last_seen[idx_last_seen])
+              hash2 = imagehash.whash(im_pil)
+              print(hash2)
+              cv2.imshow('b_histo_last_seen', b_histo_last_seen[idx_last_seen])                     
+              
+              im_pil = Image.fromarray(hist_of_a[idx_current])
+              hash3 = imagehash.whash(im_pil)
+              print(hash3)            
+              cv2.imshow('hist_of_a', hist_of_a[idx_current])         
+              
+              im_pil = Image.fromarray(hist_of_b[idx_current])
+              hash4 = imagehash.whash(im_pil) # p = 12,  crop, color, whash(im_pil, mode='db4')
+              print(hash4)            
+              cv2.imshow('hist_of_b', hist_of_b[idx_current])             
+              
+              hash_list.append(hash1-hash3)
+              hash_list.append(hash1-hash4)
+              hash_list.append(hash2-hash3)
+              hash_list.append(hash2-hash4)
+              
+              main_hash.append(hash_list)
           
-      
+          list_of_first_comp = []
+          list_of_second_comp = []
+          list_of_third_comp = []
+          list_of_fourth_comp =[]
           
-          #colum_add = np.full((temp_size_a[0], 50, 3), 255, dtype=original_img.dtype)
-          #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
-          #cropped_img = original_img[450:,450:]
-          '''result_1 = np.append(hist_of_a, colum_add, axis=1)
-          result_2 = np.append(colum_add, result_1, axis=1)          
-          temp_size = result_2.shape
-          row_add = np.full((50, temp_size[1], 3), 255, dtype=original_img.dtype)         
-          result_3 = np.append(result_2, row_add, axis=0)
-          image_ind_a = np.append(row_add, result_3, axis=0)
-          white_pixels = np.where((image_ind_a[:, :, 0] == 255) & (image_ind_a[:, :, 1] == 255) & (image_ind_a[:, :, 2] == 255))
-          # set those pixels to white
-          image_ind_a[white_pixels] = [212, 212, 209] '''     
-          #cv2.imshow('fff', image_ind_a)
-          #cv2.waitKey(0)  
-          #imzzx = cv2.resize(template, (780, 780)) 
-          #cv2.imshow('Image',image_ind)
-          #cv2.waitKey(0)
-          #rotated_template = imutils.rotate_bound(hist_of_a, 0)
-          im_pil = Image.fromarray(hist_of_a)
-          hash3 = imagehash.colorhash(im_pil, 4)
-          print(hash3)            
-          cv2.imshow('hist_of_a', hist_of_a)
+          for set_of_hashs in main_hash:
+            list_of_first_comp.append(set_of_hashs[0])
+            list_of_second_comp.append(set_of_hashs[1])
+            list_of_third_comp.append(set_of_hashs[2])
+            list_of_fourth_comp.append(set_of_hashs[3])
+                
+          average_first_comp = sum(list_of_first_comp)
+          average_second_comp = sum(list_of_second_comp)
+          average_third_comp = sum(list_of_third_comp)
+          average_fourth_comp = sum(list_of_fourth_comp)
           
+          print(average_first_comp)
+          print(average_second_comp)
+          print(average_third_comp)
+          print(average_fourth_comp)
           
-
-          
-          
-          #temp_size_b = hist_of_b.shape
-          #colum_add = np.full((temp_size_b[0], 50, 3), 255, dtype=original_img.dtype)
-          #row_add = np.full((50, 498, 3), 255, dtype=original_img.dtype)
-          #cropped_img = original_img[450:,450:]
-          '''result_1 = np.append(hist_of_b, colum_add, axis=1)
-          result_2 = np.append(colum_add, result_1, axis=1)          
-          temp_size = result_2.shape
-          row_add = np.full((50, temp_size[1], 3), 255, dtype=original_img.dtype)         
-          result_3 = np.append(result_2, row_add, axis=0)
-          image_ind_b = np.append(row_add, result_3, axis=0)
-          white_pixels = np.where((image_ind_b[:, :, 0] == 255) & (image_ind_b[:, :, 1] == 255) & (image_ind_b[:, :, 2] == 255))
-          image_ind_b[white_pixels] = [212, 212, 209]   '''   
-          
-          im_pil = Image.fromarray(hist_of_b)
-          hash4 = imagehash.colorhash(im_pil, 4) # p = 12,  crop, color, whash(im_pil, mode='db4')
-          print(hash4)            
-          cv2.imshow('hist_of_b', hist_of_b)
-          
-        
-          
-          
-          print(hash1-hash3)
-          print(hash1-hash4)
-          print(hash2-hash3)
-          print(hash2-hash4)
-          
-
           cv2.waitKey(0)
           
-          cv2.destroyAllWindows() 
+          min_value = min([average_first_comp, average_second_comp, average_third_comp, average_fourth_comp])
           
-          update_counter = update_counter -1
+          if min_value == average_first_comp or min_value == average_fourth_comp:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) 
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) 
+          else:
+            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) 
+            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) 
+              #cv2.waitKey(0)
+              
+              #cv2.destroyAllWindows() 
+          
+          #update_counter = update_counter -1
        
           
           
