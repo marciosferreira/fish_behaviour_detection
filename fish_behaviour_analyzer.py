@@ -6,7 +6,7 @@ import pandas as pd
 import time
 quad_D = 1
 quad_D_count = 0
-update_counter = 3
+update_counter = 23
 import matplotlib.pyplot as plt 
 import imutils
 fish_0_history = []
@@ -29,7 +29,7 @@ lopp = 0
 
 previous_id_fish_local = []
 
-histograms_ids = ['nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan', 'nan']
+histograms_ids = {1:[], 2:[]}
 
 #cv2.imshow('background' , bw_back)
 
@@ -38,7 +38,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(7580,10000000,1):   #3000 to 4000
+for idx_frame in range(7680,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -204,7 +204,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         extTop = tuple(contours_body[contours_body[:, :, 1].argmin()][0])
         extBot = tuple(contours_body[contours_body[:, :, 1].argmax()][0])
         #list_of_points = [extLeft, extRight, extTop, extBot]
-        print(extLeft)
+        #print(extLeft)
         copy_frame = original_img.copy()
         copy_frame[:extTop[1], :, :] = 255
         copy_frame[extBot[1]:, :, :] = 255
@@ -230,14 +230,14 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         p1 = inverted_aver_head
         p2 = inverted_fish_COM
         
-        print(inverted_aver_head)
-        print(inverted_fish_COM)
+        #print(inverted_aver_head)
+        #print(inverted_fish_COM)
                 # Difference in x coordinates
         myradians = math.atan2(p1[0]-p2[0], p1[1]-p2[1])
         mydegrees = math.degrees(myradians)
         
-        print("degre")
-        print(mydegrees)
+        #print("degre")
+        #print(mydegrees)
         
         
         from PIL import Image
@@ -331,7 +331,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
     dframe["fish_id"] = np.nan
     #dframe['fish_color'] = np.nan
     
-
+    #qprint(histograms_ids)
     if previous_df is None:
       
       previous_df = dframe.copy()
@@ -341,8 +341,8 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
       list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
          
-      previous_histograms_ids[1] = histograms[list_idx[0]]
-      previous_histograms_ids[2] = histograms[list_idx[1]]
+      previous_histograms_ids[1].append(histograms[list_idx[0]])
+      previous_histograms_ids[2].append(histograms[list_idx[1]])
 
        
     unique_quadrants = dframe.quadrant_local.unique()
@@ -360,7 +360,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
             dframe_last_seen = previous_df.copy()
             make_copy_last_seen = False         
           histograms_last_seen = histograms_ids.copy() 
-          histograms_X_Y = {"X": 'nan', "Y": 'nan'}
+          histograms_X_Y = {"X":[], "Y":[]}
                 
           continue
 
@@ -369,8 +369,8 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
         if update_counter == 1:                    
           dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]          
           list_idx = dframe.loc[dframe['quadrant_local'] == quadr].index.tolist()          
-          histograms_X_Y['X'] = histograms[list_idx[0]]
-          histograms_X_Y['Y'] = histograms[list_idx[1]]
+          histograms_X_Y['X'].append(histograms[list_idx[0]])
+          histograms_X_Y['Y'].append(histograms[list_idx[1]])
           previous_df = dframe.copy()         
           previous_histograms_X_Y = histograms_X_Y.copy()                 
          
@@ -419,27 +419,43 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 40 + row['fish_area'])/21
             
             #update the histograms
-            if update_counter  <= 2:  
-              histograms_X_Y[previous_fish_1_id] = histograms[row['original_index']] #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+            if update_counter  <= 20:  
+              histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
             else:
-              histograms_ids[int(previous_fish_1_id)] = histograms[row['original_index']] #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-
+              histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              if len(histograms_ids[int(previous_fish_1_id)]) > 20:
+                #del histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][-20:]
+                del histograms_ids[int(previous_fish_1_id)][0]
+              print(len(histograms_ids[int(previous_fish_1_id)]))
+              
+              #cv2.imshow('isso é um', histograms_ids[int(previous_fish_1_id)][-1])
+  
+              #cv2.waitKey(0)  
+              #print(histograms_ids[2])
+              #cv2.waitKey(0)
               
           else: #the same as above, but in a inverse way
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 40 + row['fish_area'])/21
             
             #update the histograms
-            if update_counter  <= 2:  
-              histograms_X_Y[previous_fish_2_id] = histograms[row['original_index']] #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+            if update_counter  <= 20:  
+              histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              
             else:
-              histograms_ids[int(previous_fish_2_id)] = histograms[row['original_index']] #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-
-        if update_counter > 0 and update_counter < 2:
+              histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              if len(histograms_ids[int(previous_fish_2_id)]) > 20:
+                del histograms_ids[int(previous_fish_2_id)][0] #=histograms_ids[int(previous_fish_2_id)][-20:]
+              print(len(histograms_ids[int(previous_fish_2_id)]))
+              
+              #cv2.imshow('isso é dois', histograms_ids[int(previous_fish_2_id)][-1])  
+              #cv2.waitKey(0)
+              
+        if update_counter > 0 and update_counter < 20:
           previous_histograms_X_Y = histograms_X_Y.copy()  
         
         # here we decide which fish is 1 and 2 based on X and Y
-        if update_counter == 2:
+        if update_counter == 20:
           
           current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
           current_fish_a = current_fish.iloc[0]
@@ -447,17 +463,18 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           
           
           current_fish_a_id = current_fish_a['fish_id']
-          hist_of_a = histograms_X_Y[current_fish_a_id]
+          hist_of_a = histograms_X_Y[current_fish_a_id][-1]
            
           current_fish_b_id = current_fish_b['fish_id']
-          hist_of_b = histograms_X_Y[current_fish_b_id]
+          hist_of_b = histograms_X_Y[current_fish_b_id][-1]
                   
           #hist_X = histograms_X_Y['X']    
           #hist_Y = histograms_X_Y['Y']
           
           
                 
-          a_histo_last_seen = histograms_ids[1]
+          a_histo_last_seen = histograms_X_Y['X'][-1]
+         
           #a_histo_last_seen = imutils.rotate_bound(a_histo_last_seen, 90)          
           #cv2.waitKey(0)  #need to be fixed to be dinamic
           '''temp_size_a = a_histo_last_seen.shape
@@ -481,7 +498,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
 
           
                       
-          b_histo_last_seen = histograms_ids[2]    #need to be fixed to be dinamic
+          b_histo_last_seen = histograms_X_Y['Y'][-1]    #need to be fixed to be dinamic
           #cv2.waitKey(0)  #need to be fixed to be dinamic
           '''temp_size_a = b_histo_last_seen.shape
           colum_add = np.full((temp_size_a[0], 5, 3), 255, dtype=original_img.dtype)
@@ -550,11 +567,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
           print(hash4)            
           cv2.imshow('hist_of_b', hist_of_b)
           
-          print("hashs")
-          print(hash1)
-          print(hash2)
-          print(hash3)
-          print(hash4)
+        
           
           
           print(hash1-hash3)
@@ -617,7 +630,7 @@ for idx_frame in range(7580,10000000,1):   #3000 to 4000
                           
               
           
-        if update_counter >= 2:
+        if update_counter >= 20:
           previous_histograms = histograms.copy()    
     
 
