@@ -1,4 +1,4 @@
-quadr = 'B'
+quadr = 'D'
 import cv2
 import statistics 
 import numpy as np
@@ -18,7 +18,6 @@ make_copy_last_seen = True
 first = True
 went_ok = 0
 pd.set_option('display.max_columns', None)  
-
 cap = cv2.VideoCapture('C:/Users/marci/Desktop/20191121_1454_iCab_L_C.avi')
 background_image = cv2.imread('C:/Users/marci/Desktop/background_1.jpg')
 bw_back = cv2.cvtColor(background_image, cv2.COLOR_BGR2GRAY)
@@ -41,7 +40,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(14770,10000000,1):   #3000 to 4000
+for idx_frame in range(6060,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -87,37 +86,20 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
     #fish_color = []
     histograms = []
     countours_idx = [] # for use with template matching
-
+    template_quality = []
     counter = 0
     
     for idx, cnt in enumerate(contours):
                   
-      area = cv2.contourArea(cnt)        
-
+      area = cv2.contourArea(cnt) 
+      
+      #calculate aspect ratio for template quality filtering
+            
+    
 
       if area > 200 and area < 1500:
         
-        
-        '''image = frame 
-        mask = np.zeros(image.shape, dtype=np.uint8)
-        mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
-        result1 = cv2.bitwise_and(image, mask)
-        hsv_img = cv2.cvtColor(result1, cv2.COLOR_BGR2HSV)
-        h, s, v = hsv_img[:,:,0], hsv_img[:,:,1], hsv_img[:,:,2]
-        hist_final = cv2.calcHist([h],[0],None,[256],[0,256])
-        hist_final = hist_final[1:70]'''
-        
-        #plt.subplot(2, 2, 1) # row 1, col 2 index 1
-        #plt.plot(hist_final, color='r', label="h")          
-        #plt.title('v')
-
-        #plt.subplot(2, 2, 2) # index 2
-        #plt.plot(hist_final, color='r', label="h")
-        #plt.show()
-        
-        
-        
-        
+              
         #will be used to predict the size of the fish excluding the tail part
         fish_total_pixels = len(cnt)
 
@@ -181,11 +163,11 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
           max_distance = max(distances_cm)            
 
         slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.8)]
-        slowest_indices_for_template = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels)]                   
+        #slowest_indices_for_template = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels)]                   
         
             
         nearests_values = []
-        nearest_values_for_template = []
+        #nearest_values_for_template = []
         
         for e in slowest_indices:
           list_value_cm = cnt[e].tolist()              
@@ -193,118 +175,87 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
 
         arr = np.array(nearests_values)
         
-        for e in slowest_indices_for_template:
-          if distances_cm[e] < int(max_distance*0.5):
-            list_value_cm = cnt[e].tolist()              
-            nearest_values_for_template.append(list_value_cm)
-
-        arr_for_template = np.array(nearest_values_for_template)
-        
-        contours_body = arr_for_template
-        
-        # determine the most extreme points along the contour of the tail cropped fish
-        extLeft = tuple(contours_body[contours_body[:, :, 0].argmin()][0])
-        extRight = tuple(contours_body[contours_body[:, :, 0].argmax()][0])
-        extTop = tuple(contours_body[contours_body[:, :, 1].argmin()][0])
-        extBot = tuple(contours_body[contours_body[:, :, 1].argmax()][0])
-        #list_of_points = [extLeft, extRight, extTop, extBot]
-        #print(extLeft)
-        copy_frame = original_img.copy()
-        copy_frame[:extTop[1], :, :] = 255
-        copy_frame[extBot[1]:, :, :] = 255
-        copy_frame[:, :extLeft[0], :] = 255
-        copy_frame[:, extRight[0]:, :] = 255
-        
-      
-        
-        #calculate the angle and rotate the black masked image
+       
         aver_cm = np.mean(arr, axis=0).astype(int)
         
         #fish_center of mass
         fish_COM = (aver_cm[0][0], aver_cm[0][1])
+               
+        
+        drawn_image_for_template = blank_image.copy()
+        drawn_image_for_template = cv2.drawContours(drawn_image_for_template, [cnt], -1, color=(255,255,255),thickness=-1)
+        
+       
+              
         
         
-        #create a fake y axis, as in images, the y is inverted
-    
+        kernel = np.ones((3,3),np.uint8)
+
         
+        #need to invert y axis, as the array and image works in inverse way
         inverted_aver_head = (aver_head[0], frame.shape[0] - aver_head[1]) 
         inverted_fish_COM = (fish_COM[0], frame.shape[0] - fish_COM[1])
-
-                
+        
+        
         p1 = inverted_aver_head
         p2 = inverted_fish_COM
         
-        #print(inverted_aver_head)
-        #print(inverted_fish_COM)
+   
                 # Difference in x coordinates
         myradians = math.atan2(p1[0]-p2[0], p1[1]-p2[1])
         mydegrees = math.degrees(myradians)
         
-        #print("degre")
-        #print(mydegrees)
-        
-        
         from PIL import Image
-        im_pil = Image.fromarray(copy_frame)
+        im_pil = Image.fromarray(drawn_image_for_template)
         #rotated = im_pil.rotate(, expand=True)
         rotated =  im_pil.rotate(mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
-
         rotated_template = np.asarray(rotated)
-              
-       
+          
         
-        #rotated_template = im_pil.rotate(-mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)))
-
-        
+               
         bw_back_rt = cv2.cvtColor(rotated_template, cv2.COLOR_BGR2GRAY)
         
-        
-        
    
-        ret,thresh = cv2.threshold(bw_back_rt,170, 255,cv2.THRESH_BINARY)
+        thresh = bw_back_rt.clip(max=1)
         
-        
-        #cv2.imshow('error', thresh)
-        #cv2.waitKey(0)
-        
-        thresh = thresh.clip(max=1)
-        
-        inverted =1-thresh
-        
-      
-        
-        #coords = np.argwhere(thresh)
-        mask2 = np.argwhere(inverted)
-        
-      
         try:
-          x0, y0 = mask2.min(axis=0)
-          x1, y1 = mask2.max(axis=0) + 1   # slices are exclusive at the top
+                
+          #Get the fish coordinates
+          mask = np.argwhere(thresh)     
+          y0, x0 = mask.min(axis=0)
+          y1, x1 = mask.max(axis=0) + 1   # slices are exclusive at the top
         
-        
-        
+
+          
+          #let's cut the tail and calculate coordinates again
+          fish_length = y1-y0
+          value_to_decrease = int(fish_length*0.3)
+          new_inferior_limit = y1-value_to_decrease
+          thresh[new_inferior_limit:,:]=0
+          mask = np.argwhere(thresh) 
+            
+          y0, x0 = mask.min(axis=0)
+          y1, x1 = mask.max(axis=0) + 1   # slices are exclusive at the top 
+
                 
           #before apply the cut coordinates, grab a rotated main image
           im_pil = Image.fromarray(original_img.copy())
-          rotated_original =  im_pil.rotate(mydegrees, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
+          rotated_original =  im_pil.rotate(mydegrees, resample=Image.BICUBIC, fillcolor=tuple(np.mean(np.array(im_pil)[0,:], axis=0).astype(int)), expand=True)
           rotated_original = np.asarray(rotated_original)
+          
+           
+          #cv2.imshow('rotated_original', rotated_original)                         
+          #cv2.waitKey(0)
+              
 
           
-          final_template = rotated_original[x0:x1, y0:y1, :]
+          final_template = rotated_original[y0:y1, x0:x1, :]
+      
 
         except:
-          rotated_original = rotated_original[0:20, 0:20, :]
-         
-
-          
+          final_template = rotated_original[0:20, 0:20, :] 
         
-        
-        
-        
-        
-        
-        
-        
+        extent = cv2.Laplacian(final_template, cv2.CV_64F).var()
                 
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
@@ -319,7 +270,8 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
         else:
           quadrant_value = "D"       
 
-
+          
+      
 
         #store variables locally in the loop for immediate calculation purposes
         idx_local.append(counter)          
@@ -328,15 +280,16 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
         fish_tail_local.append(list_of_points[max_index_tail])
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
-        fish_area.append(area)
+        fish_area.append(area)        
         histograms.append(final_template)   # need to fix afterwards
         countours_idx.append(idx)
+        template_quality.append(extent)
         
         
         
                       
         counter +=1
-
+    
     
     dframe = pd.DataFrame(idx_local)
     dframe['lenght_of_fish_local'] = lenght_of_fish_local
@@ -348,6 +301,7 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
     dframe['cnt_idx'] = countours_idx
     dframe["fish_id"] = np.nan
     
+    #print(dframe)
     
     #print(dframe)
     
@@ -357,14 +311,10 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
     if previous_df is None:
       
       previous_df = dframe.copy()
-      previous_histograms = histograms.copy()
-      previous_histograms_ids = histograms_ids.copy()     
+
      
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
       list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
-         
-      previous_histograms_ids[1].append(histograms[list_idx[0]])
-      previous_histograms_ids[2].append(histograms[list_idx[1]])
 
        
     
@@ -380,7 +330,7 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
           if make_copy_last_seen == True:
             dframe_last_seen = previous_df.copy()
             make_copy_last_seen = False         
-          histograms_last_seen = histograms_ids.copy() 
+          #histograms_last_seen = histograms_ids.copy() 
           histograms_X_Y = {"X":[], "Y":[]}
                 
           continue
@@ -393,7 +343,7 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
           histograms_X_Y['X'].append(histograms[list_idx[0]])
           histograms_X_Y['Y'].append(histograms[list_idx[1]])
           previous_df = dframe.copy()         
-          previous_histograms_X_Y = histograms_X_Y.copy()                 
+          #previous_histograms_X_Y = histograms_X_Y.copy()                 
          
                
        
@@ -439,39 +389,57 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
             #take the oportunity to update the fish area (area is not used for a while)
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 40 + row['fish_area'])/21
             
-            #update the histograms
-            if update_counter  <= 20:  
-              histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+            #update the histograms only if the template has quality higher than 0.5 (template_quality)
+            
+            if template_quality[row['original_index']] > 150:
+              print('good quality')
+              print(template_quality[row['original_index']])
+            
+              if update_counter  <= 20:  
+                histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              else:
+                histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+                
+                #cv2.imshow(str(previous_fish_1_id), histograms[row['original_index']])                         
+                #cv2.waitKey(0)
+                
+                    
+                if len(histograms_ids[int(previous_fish_1_id)]) > 20:
+                  del histograms_ids[int(previous_fish_1_id)][0]
             else:
-              histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-              if len(histograms_ids[int(previous_fish_1_id)]) > 20:
-                #del histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][-20:]
-                del histograms_ids[int(previous_fish_1_id)][0]
-              #print(len(histograms_ids[int(previous_fish_1_id)]))
-              
-              #cv2.imshow('isso é um', histograms_ids[int(previous_fish_1_id)][-1])
-  
-              #cv2.waitKey(0)  
-              #print(histograms_ids[2])
-              #cv2.waitKey(0)
+              print("counter")
+              print(update_counter)
+              print('bad qulity')
+              print(template_quality[row['original_index']])
+ 
               
           else: #the same as above, but in a inverse way
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
             dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 40 + row['fish_area'])/21
             
             #update the histograms
-            if update_counter  <= 20:  
-              histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_2_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-              
+            if template_quality[row['original_index']] > 15
+            0:
+              print('good qulity')
+              print(template_quality[row['original_index']])
+              if update_counter  <= 20:  
+                histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) 
+                
+              else:
+                histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']]) 
+                
+                      
+                
+                if len(histograms_ids[int(previous_fish_2_id)]) > 20:
+                  del histograms_ids[int(previous_fish_2_id)][0] 
+             
             else:
-              histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_2_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-              if len(histograms_ids[int(previous_fish_2_id)]) > 20:
-                del histograms_ids[int(previous_fish_2_id)][0] #=histograms_ids[int(previous_fish_2_id)][-20:]
-              #print(len(histograms_ids[int(previous_fish_2_id)]))
-              
-              #cv2.imshow('isso é dois', histograms_ids[int(previous_fish_2_id)][-1])  
-              #cv2.waitKey(0)
-              
+              print("counter")
+              print(update_counter)
+              print('bad qulity')
+              print(template_quality[row['original_index']])
+             
+                  
         if update_counter > 0 and update_counter < 20:
           previous_histograms_X_Y = histograms_X_Y.copy()  
           
@@ -480,27 +448,35 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
         # here we decide which fish is 1 and 2 based on X and Y
         if update_counter == 20:
           
+          #but we need to check if we already have 20 images templates stored  in lists XY          
+          
+          if len(histograms_X_Y[previous_fish_1_id]) < 20 or len(histograms_X_Y[previous_fish_2_id]) < 20:
+            update_counter -=1
+            continue
+          
           current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
           current_fish_0 = current_fish.iloc[0]
           current_fish_1 = current_fish.iloc[1]
           
-          
-          
-          # recover the lists of templates to hash         
-          
-          #current_fish_0_id = current_fish_0['fish_id']
-          #templates_of_0 = histograms_X_Y[current_fish_0_id]
-           
-          #current_fish_1_id = current_fish_1['fish_id']
-          #templates_of_1 = histograms_X_Y[current_fish_1_id]
+  
           
           templates_of_ID1 = histograms_ids[1]
           templates_of_ID2 = histograms_ids[2]
                   
-          X_current_template_list = histograms_X_Y['X']         
-          Y_current_template_list = histograms_X_Y['Y'] 
+          X_current_template_list = histograms_X_Y['X']
+          if len(X_current_template_list) > 20:
+            X_current_template_list = X_current_template_list[1:]
+                     
+          Y_current_template_list = histograms_X_Y['Y']
+          if len(Y_current_template_list) > 20:
+            Y_current_template_list = Y_current_template_list[1:]
           
-            
+          print(len(X_current_template_list))
+          print(len(Y_current_template_list))
+          print(len(templates_of_ID2))
+          print(len(templates_of_ID1)) 
+ 
+  
           ########### hash images ##########
           main_hash = []
           for idx_current, x in enumerate(templates_of_ID1):
@@ -509,23 +485,19 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
               hash_list = []
                                                 
               im_pil = Image.fromarray(X_current_template_list[idx_last_seen])
-              hash1 = imagehash.whash(im_pil)
-              #print(hash1)
-              cv2.imshow('X_current_template_list',X_current_template_list[idx_last_seen])                         
-                    
+              hash1 = imagehash.whash(im_pil, 4, remove_max_haar_ll = False)
+              cv2.imshow('X_current_template_list', X_current_template_list[idx_last_seen])              
+              
               im_pil = Image.fromarray(Y_current_template_list[idx_last_seen])
-              hash2 = imagehash.whash(im_pil)
-              #print(hash2)
+              hash2 = imagehash.whash(im_pil, 4, remove_max_haar_ll = False)             
               cv2.imshow('Y_current_template_list', Y_current_template_list[idx_last_seen])                     
               
               im_pil = Image.fromarray(templates_of_ID1[idx_current])
-              hash3 = imagehash.whash(im_pil)
-              #print(hash3)            
+              hash3 = imagehash.whash(im_pil, 4, remove_max_haar_ll = False)                     
               cv2.imshow('hist_of_a', templates_of_ID1[idx_current])         
               
               im_pil = Image.fromarray(templates_of_ID2[idx_current])
-              hash4 = imagehash.whash(im_pil) # p = 12,  crop, color, whash(im_pil, mode='db4')
-              #print(hash4)            
+              hash4 = imagehash.whash(im_pil, 4, remove_max_haar_ll = False) # p = 12,  crop, color, whash(im_pil, mode='db4')                   
               cv2.imshow('hist_of_b', templates_of_ID2[idx_current])             
               
               hash_list.append(hash1-hash3)
@@ -533,7 +505,8 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
               hash_list.append(hash2-hash3)
               hash_list.append(hash2-hash4)
               
-              main_hash.append(hash_list)
+              main_hash.append(hash_list)      
+          
           
           list_of_first_comp = []
           list_of_second_comp = []
@@ -551,10 +524,12 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
           average_third_comp = sum(list_of_third_comp)
           average_fourth_comp = sum(list_of_fourth_comp)
           
+          print("Comppppp")
           print(average_first_comp)
           print(average_second_comp)
           print(average_third_comp)
           print(average_fourth_comp)
+          print("comp fim")
           
           cv2.waitKey(0)
           
@@ -566,68 +541,13 @@ for idx_frame in range(14770,10000000,1):   #3000 to 4000
           else:
             dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(2) 
             dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(1) 
-              #cv2.waitKey(0)
-              
-              #cv2.destroyAllWindows() 
-          
-          #update_counter = update_counter -1
-       
-          
-          
-         
 
-         
-    
-          """if max_simil == similarity_acurrent_aaverage or max_simil == similarity_bcurrent_baverage:
-            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
-            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-          else:            
-            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic"""
-            
-          
-                  
-                                
-          '''if (similarity_acurrent_aaverage > similarity_acurrent_baverage):
-            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
-            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
-            make_copy_last_seen = True
-            print('1')
-          else:
-            dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-            dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
-            make_copy_last_seen = True
-            print('2')
-                
-            else:
-              
-              print('2222')
-              
-              if similarity_bcurrent_aaverage > similarity_bcurrent_baverage:
-                dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(2) # needs to be fixed to be dynamic
-                dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(1) # needs to be fixed to be dynamic              
-                make_copy_last_seen = True 
-                print('1')                            
-              else:
-                print('2')
-                dframe.loc[dframe.fish_id == current_fish_a_id, "fish_id"] = float(1) # needs to be fixed to be dynamic
-                dframe.loc[dframe.fish_id == current_fish_b_id, "fish_id"] = float(2) # needs to be fixed to be dynamic              
-                make_copy_last_seen = True
-          
-          #else:
-            #update_counter -= 1'''
-                  
-                          
-              
-          
-        if update_counter >= 20:
-          previous_histograms = histograms.copy()    
-    
 
-            
-                        
-           
+        
     update_counter += 1
+    
+   
+    
     if update_counter > 100:
       update_counter = 100
 
