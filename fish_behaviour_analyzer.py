@@ -43,7 +43,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(8170,10000000,1):   #3000 to 4000
+for idx_frame in range(8190,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -330,11 +330,11 @@ for idx_frame in range(8170,10000000,1):   #3000 to 4000
     
     unique_quadrants = dframe.quadrant_local.unique()
     if previous_df is None:
-      
-      previous_df = dframe.copy()
-
-     
-      previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
+      active = "XY"      
+      previous_df = dframe.copy()           
+      #previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in [1, 2]]
+      previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]
+      histograms_X_Y = {"X":[], "Y":[]}
       list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
 
     
@@ -484,7 +484,15 @@ for idx_frame in range(8170,10000000,1):   #3000 to 4000
         else:          
           continue
         
-        active = "id" 
+        active = "id"
+        
+        if len(histograms_ids[1]) < 20 or len(histograms_ids[2]) < 20:  #means that is the begining and we don't have ids yet
+          histograms_ids[1] = histograms_X_Y[previous_fish_1_id]
+          dframe.loc[dframe.fish_id == previous_fish_1_id, "fish_id"] = float(1) 
+          histograms_ids[2] = histograms_X_Y[previous_fish_2_id]
+          dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)          
+          
+          continue
           
         print(len(histograms_X_Y[previous_fish_1_id])) 
         print(len(histograms_X_Y[previous_fish_2_id]))
