@@ -18,6 +18,8 @@ fish_0_history = []
 fish_1_history = []
 make_copy_last_seen = True
 first = True
+
+calculo_area = []
 went_ok = 0
 active = "id"
 is_first_iteraction = False 
@@ -44,7 +46,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(10660,10000000,1):   #3000 to 4000
+for idx_frame in range(11000,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -168,7 +170,7 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
           distances_cm.append(distance)
           max_distance = max(distances_cm)            
 
-        slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels*0.6)]
+        slowest_indices = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels)]
         #slowest_indices_for_template = sorted(range(len(distances_cm)), key = lambda sub: distances_cm[sub])[:int(fish_total_pixels)]                   
         
             
@@ -176,8 +178,9 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         #nearest_values_for_template = []
         
         for e in slowest_indices:
-          list_value_cm = cnt[e].tolist()              
-          nearests_values.append(list_value_cm)
+          if distances_cm[e] < int(max_distance*0.7):
+            list_value_cm = cnt[e].tolist()              
+            nearests_values.append(list_value_cm)
 
         arr = np.array(nearests_values)
         
@@ -185,36 +188,13 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         aver_cm = np.mean(arr, axis=0).astype(int)
         
         #fish_center of mass
-        fish_COM = (aver_cm[0][0], aver_cm[0][1])
-               
-        
-        final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]
-        
-        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
-        #ret,final_template = cv2.threshold(final_template,10,0,cv2.THRESH_BINARY)  
-        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
-        hist = hist[:185]
-        hist_1 = hist[:146]
-       
-        hist_2 = hist[146:]
-      
-        final=sum(hist_1)
-        #
-        final=final[0]
-        final = area
-       
-        #plt.hist(dst)
-        #plt.show(block=False)
-        
-        
-        #cv2.waitKey(0)
+        fish_COM = (aver_cm[0][0], aver_cm[0][1])       
                     
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
 
-        final = fish_pectoral_lenght
         
-        cv2.imshow('final_template', final_template)
+       
         
       
         if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
@@ -237,7 +217,7 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)        
-        histograms.append(final)   # need to fix afterwards
+        histograms.append(fish_pectoral_lenght)   # need to fix afterwards
         countours_idx.append(0)
         template_area.append(area)
         template_blur.append(0)
@@ -348,68 +328,76 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
                   
           lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]
       
-          
+                   
+                       
         
           if lower_indice[0] == 0:
-            dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
+            dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id         
             
-            #take the oportunity to update the fish area (area is not used for a while)
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_1_area * 40 + row['fish_area'])/21
+            #we need append to template history in case the fish area is higher than a threshold
             
-            #update the histograms only if the template has quality higher than 0.5 (template_area)
             
-            if template_dark[row['original_index']] == 0 and template_blur[row['original_index']] == 0:
-              #print('good quality')
-              #print(template_area[row['original_index']])
-            
-              if active == "XY":  
-                histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-                if len(histograms_X_Y[previous_fish_1_id]) > 20:
-                  histograms_X_Y[previous_fish_1_id] = histograms_X_Y[previous_fish_1_id][-40:]
-                
-              else:
-                histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-                
-                #cv2.imshow(str(previous_fish_1_id), histograms[row['original_index']])                         
-                #cv2.waitKey(0)
-                
-                    
-                if len(histograms_ids[int(previous_fish_1_id)]) > 40:
-                  histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][-40:]
-            
+                   
+            if active == "XY":  
+              histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              if len(histograms_X_Y[previous_fish_1_id]) > 60:
+                histograms_X_Y[previous_fish_1_id] = histograms_X_Y[previous_fish_1_id][-60:]
+              
+            else:
+               
+              histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_ids[int(previous_fish_1_id)], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+                                
+              if len(histograms_ids[int(previous_fish_1_id)]) > 60:
+                histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][-60:]
+          
               
           else: #the same as above, but in a inverse way
-            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id
-            dframe.loc[row['original_index'],'fish_area'] = (previous_fish_2_area * 40 + row['fish_area'])/21
+            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id          
             
-            #update the histograms
-            if template_dark[row['original_index']] == 0 and template_blur[row['original_index']] == 0:
-       
               
-              if active == "XY":    
-                histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) 
-                if len(histograms_X_Y[previous_fish_2_id]) > 40:
-                  histograms_X_Y[previous_fish_2_id] = histograms_X_Y[previous_fish_2_id][-40:]
-                
-              else:
-                histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']])                
-                if len(histograms_ids[int(previous_fish_2_id)]) > 40:
-                  histograms_ids[int(previous_fish_2_id)] = histograms_ids[int(previous_fish_2_id)][-40:]
+            if active == "XY":    
+              histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) 
+              if len(histograms_X_Y[previous_fish_2_id]) > 60:
+                histograms_X_Y[previous_fish_2_id] = histograms_X_Y[previous_fish_2_id][-60:]
+              
+            else:
+              
+              histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']])                
+              if len(histograms_ids[int(previous_fish_2_id)]) > 60:
+                histograms_ids[int(previous_fish_2_id)] = histograms_ids[int(previous_fish_2_id)][-60:]
+            
+           
              
-           
-           
-        # here we decide which fish is 1 and 2 based on X and Y
-        #but we need to check if we already have 40 images templates stored  in lists XY   
-        
           
                   
         if active == "XY":
-          if len(histograms_X_Y[previous_fish_1_id]) == 40 and len(histograms_X_Y[previous_fish_2_id]) == 40:          
-            t_stat, p_val = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
+          if len(histograms_X_Y[previous_fish_1_id]) == 60 and len(histograms_X_Y[previous_fish_2_id]) == 60 and len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:          
+            t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
+            cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+            cov1 = cov(histograms_X_Y[previous_fish_1_id])
+            cov2 = cov(histograms_X_Y[previous_fish_2_id])            
+            best_cov1 = cov(histograms_ids[1])
+            best_cov2 = cov(histograms_ids[2])
+            print("best covs")
+            print(best_cov1)
+            print(best_cov2)
+            print(cov1)
+            print(cov2)
+                
+                        
+       
+          else:
+            cov1 = 1
+            cov2 = 1
+            best_cov1 = 6
+            best_cov2 = 6
+            p_val_first = 0
             
-             
+     
           previous_histograms_X_Y = histograms_X_Y.copy()
-          if len(histograms_X_Y[previous_fish_1_id]) < 40 or len(histograms_X_Y[previous_fish_2_id]) < 40 or p_val > 0.05:
+          
+          # test to see if xy std is higher than the template std, And if yes, don´t go ahead and keep appending values to xy
+          if len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60 or p_val_first > 0.01 or cov1*0.80 > best_cov1 or cov2*0.80 > best_cov2:
             continue
         else:          
           continue
@@ -417,19 +405,40 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         active = "id"
         
         
-        if len(histograms_ids[1]) < 40 or len(histograms_ids[2]) < 40:
-           #means that is the begining and we don't have ids yet
+
+        
+        
+        # here we update our templates accordingly to standard deviation        
+        if len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60: 
+                 
+          cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+          best_cov1 = cov(best_histogram_ids_1)
+          best_cov2 = cov(best_histogram_ids_2)
+          cov1 = cov(histograms_ids[1])
+          cov2 = cov(histograms_ids[2])
+          
+          if cov1 > best_cov1:
+            histograms_ids[1] = best_histogram_ids_1
+          else:
+            best_histogram_ids_1 = histograms_ids[1]
+            
+          if cov2 > best_cov1:
+            histograms_ids[2] = best_histogram_ids_2
+          else:
+            best_histogram_ids_2 = histograms_ids[2]
+        else:    
+          #means that is the begining and we don't have enough ids yet, then we need to copy from best template XY
           histograms_ids[1] = histograms_X_Y[previous_fish_1_id]
           best_histogram_ids_1 = histograms_X_Y[previous_fish_1_id].copy()        
           dframe.loc[dframe.fish_id == previous_fish_1_id, "fish_id"] = float(1) 
           histograms_ids[2] = histograms_X_Y[previous_fish_2_id]
           best_histogram_ids_2 = histograms_X_Y[previous_fish_2_id].copy()
-          dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)          
+          dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)        
           
-          continue
-
+          continue    
+            
         
-       
+     
 
           
         current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
@@ -441,36 +450,27 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
 
         templates_of_ID1 = histograms_ids[1]
         templates_of_ID2 = histograms_ids[2]
-        print("idddddd")
         
       
                 
         X_current_template_list = histograms_X_Y['X']
-        if len(X_current_template_list) > 40:
-          X_current_template_list = X_current_template_list[-40:]
+        if len(X_current_template_list) > 60:
+          X_current_template_list = X_current_template_list[-60:]
                     
         Y_current_template_list = histograms_X_Y['Y']
-        if len(Y_current_template_list) > 40:
-          Y_current_template_list = Y_current_template_list[-40:]
+        if len(Y_current_template_list) > 60:
+          Y_current_template_list = Y_current_template_list[-60:]       
 
-        print(statistics.mean(templates_of_ID1))
-        print(statistics.mean(templates_of_ID2))
-        print(statistics.mean(X_current_template_list))
-        print(statistics.mean(Y_current_template_list))
         
-        print('first')
+     
+        cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+        cov1 = cov(templates_of_ID1)
+        cov2 = cov(templates_of_ID2)
         
-        t_stat, p_val_id = stats.ttest_ind(templates_of_ID1, templates_of_ID2, equal_var=True)
-        print(p_val_id)
-        t_stat, p_val_xy = stats.ttest_ind(X_current_template_list, Y_current_template_list, equal_var=True)
-        print(p_val_xy)
-
-        if p_val_id > 0.05:
-          print("correction")
+        if cov1 > 7:
           templates_of_ID1 = best_histogram_ids_1.copy()
+        if cov2 > 7:
           templates_of_ID2 = best_histogram_ids_2.copy()
-          t_stat, p_val_id = stats.ttest_ind(templates_of_ID1, templates_of_ID2, equal_var=True)
-          print(p_val_id)         
         
         
         t_stat, p_val = stats.ttest_ind(templates_of_ID1 + X_current_template_list, templates_of_ID2 + Y_current_template_list, equal_var=True)
@@ -483,23 +483,8 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         else:
           option = '1Y'
 
-        print("p value1")
-        print(option1)
-        print("p value2")
-        print(option2)
         
-        print("arrays")
-        print(templates_of_ID1)
-        print("arrays")
-        print(templates_of_ID2)
-        print("arrays")
-        print(X_current_template_list)
-        print("arrays")
-        print(Y_current_template_list)
 
-
-
-        cv2.waitKey(0)
         
 
         ########### hash images ##########
@@ -513,10 +498,6 @@ for idx_frame in range(10660,10000000,1):   #3000 to 4000
         else:
           dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(2) 
           dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(1) 
-
-
-        
-
 
     
     drawn_image = blank_image.copy()
