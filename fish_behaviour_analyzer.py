@@ -192,16 +192,8 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
                     
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
-        
 
-        final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]        
-        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
-        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
-        hist = hist[:185]
-        hist_1 = hist[:146]       
-        hist_2 = hist[146:]      
-        final=sum(hist_1)       
-        final_grey=final[0]
+        
        
         
       
@@ -225,11 +217,11 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)        
-        histograms.append(final_grey)   # need to fix afterwards
+        histograms.append(fish_pectoral_lenght)   # need to fix afterwards
         countours_idx.append(0)
-        #template_area.append(area)
-        #template_blur.append(0)
-        #template_dark.append(0)
+        template_area.append(area)
+        template_blur.append(0)
+        template_dark.append(0)
         
      
         
@@ -377,24 +369,36 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
            
              
           
-        vary = 8 # choose initial std threshold
-        #limit = 2 # choose the limit to add new data, (1=very restrictive, more time to choose)      
+                  
         if active == "XY":
-          previous_histograms_X_Y = histograms_X_Y.copy()
-          cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-          cov1 = cov(histograms_X_Y[previous_fish_1_id])
-          cov2 = cov(histograms_X_Y[previous_fish_2_id])  
-          
           if len(histograms_X_Y[previous_fish_1_id]) == 60 and len(histograms_X_Y[previous_fish_2_id]) == 60 and len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:          
-                      
-            t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=False)
-            #cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100 
-                       
-            if p_val_first > 1e-5:
-              continue  
-          elif len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60 or cov1 > vary or cov1 > vary:  # we are in the begining, no id template yet. Only use a threshold to cut bad initial signal
-            continue  
-                                
+            t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
+            cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+            cov1 = cov(histograms_X_Y[previous_fish_1_id])
+            cov2 = cov(histograms_X_Y[previous_fish_2_id])            
+            best_cov1 = cov(histograms_ids[1])
+            best_cov2 = cov(histograms_ids[2])
+            print("best covs")
+            print(best_cov1)
+            print(best_cov2)
+            print(cov1)
+            print(cov2)
+                
+                        
+       
+          else:
+            cov1 = 1
+            cov2 = 1
+            best_cov1 = 6
+            best_cov2 = 6
+            p_val_first = 0
+            
+     
+          previous_histograms_X_Y = histograms_X_Y.copy()
+          
+          # test to see if xy std is higher than the template std, And if yes, don´t go ahead and keep appending values to xy
+          if len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60 or p_val_first > 0.01 or cov1*0.80 > best_cov1 or cov2*0.80 > best_cov2:
+            continue
         else:          
           continue
         
@@ -459,19 +463,19 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
         
      
-        cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+        '''cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
         cov1 = cov(templates_of_ID1)
         cov2 = cov(templates_of_ID2)
         
         if cov1 > 7:
           templates_of_ID1 = best_histogram_ids_1.copy()
         if cov2 > 7:
-          templates_of_ID2 = best_histogram_ids_2.copy()
+          templates_of_ID2 = best_histogram_ids_2.copy()'''
         
         
-        t_stat, p_val = stats.ttest_ind(templates_of_ID1 + X_current_template_list, templates_of_ID2 + Y_current_template_list, equal_var=True)
+        t_stat, p_val = stats.ttest_ind(templates_of_ID1 + X_current_template_list, templates_of_ID2 + Y_current_template_list, equal_var=False)
         option1 = p_val
-        t_stat, p_val = stats.ttest_ind(templates_of_ID1 + Y_current_template_list, templates_of_ID2 + X_current_template_list, equal_var=True)
+        t_stat, p_val = stats.ttest_ind(templates_of_ID1 + Y_current_template_list, templates_of_ID2 + X_current_template_list, equal_var=False)
         option2 = p_val
         
         if option1<option2:
