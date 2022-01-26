@@ -107,6 +107,8 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
       if area > 200 and area < 1500:
         
+        
+        
               
         #will be used to predict the size of the fish excluding the tail part
         fish_total_pixels = len(cnt)
@@ -155,6 +157,14 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           farthest_values.append(list_value)
 
         arr = np.array(farthest_values)
+        
+        
+        #rect = cv2.minAreaRect(arr)
+        #box = cv2.boxPoints(rect)
+        #box = np.int0(box)
+        #area_rec = cv2.contourArea(box)
+        
+        
         aver_head = np.mean(arr, axis=0).astype(int)
         
         #the head coordinates
@@ -184,6 +194,8 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
         arr = np.array(nearests_values)
         
+   
+        area_rec = cv2.contourArea(arr)
        
         aver_cm = np.mean(arr, axis=0).astype(int)
         
@@ -193,6 +205,15 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )
 
+        final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]        
+        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
+        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
+        hist = hist[:185]
+        hist_1 = hist[:146]       
+        hist_2 = hist[146:]      
+        final=sum(hist_1) + sum(hist_2)       
+        final_grey=final[0]
+       
         
        
         
@@ -216,10 +237,10 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
         fish_tail_local.append(list_of_points[max_index_tail])
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
-        fish_area.append(area)        
+        fish_area.append(area_rec)        
         histograms.append(fish_pectoral_lenght)   # need to fix afterwards
         countours_idx.append(0)
-        template_area.append(area)
+        template_area.append(area_rec)
         template_blur.append(0)
         template_dark.append(0)
         
@@ -238,7 +259,7 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
     dframe['fish_area'] = fish_area
     dframe['cnt_idx'] = countours_idx
     dframe["fish_id"] = np.nan
-
+   
     
     #print(dframe)
     
@@ -371,6 +392,7 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           
                   
         if active == "XY":
+          previous_histograms_X_Y = histograms_X_Y.copy()
           if len(histograms_X_Y[previous_fish_1_id]) == 60 and len(histograms_X_Y[previous_fish_2_id]) == 60 and len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:          
             t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
             cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
@@ -378,27 +400,15 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
             cov2 = cov(histograms_X_Y[previous_fish_2_id])            
             best_cov1 = cov(histograms_ids[1])
             best_cov2 = cov(histograms_ids[2])
-            print("best covs")
-            print(best_cov1)
-            print(best_cov2)
-            print(cov1)
-            print(cov2)
-                
-                        
+            if p_val_first > 0.05 or cov1*0.80 > best_cov1 or cov2*0.80 > best_cov2:
+              continue                       
        
           else:
-            cov1 = 1
-            cov2 = 1
-            best_cov1 = 6
-            best_cov2 = 6
-            p_val_first = 0
+            # test to see if xy std is higher than the template std, And if yes, don´t go ahead and keep appending values to xy
+            if len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60:
+              continue
+           
             
-     
-          previous_histograms_X_Y = histograms_X_Y.copy()
-          
-          # test to see if xy std is higher than the template std, And if yes, don´t go ahead and keep appending values to xy
-          if len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60 or p_val_first > 0.01 or cov1*0.80 > best_cov1 or cov2*0.80 > best_cov2:
-            continue
         else:          
           continue
         
@@ -417,15 +427,18 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           cov1 = cov(histograms_ids[1])
           cov2 = cov(histograms_ids[2])
           
-          if cov1 > best_cov1:
+          print(cov1)
+          print(cov2)
+ 
+          if cov1 > best_cov1 and cov2 > best_cov2:
             histograms_ids[1] = best_histogram_ids_1
+            histograms_ids[2] = best_histogram_ids_2            
           else:
             best_histogram_ids_1 = histograms_ids[1]
+            best_histogram_ids_2 = histograms_ids[2]         
             
-          if cov2 > best_cov1:
-            histograms_ids[2] = best_histogram_ids_2
-          else:
-            best_histogram_ids_2 = histograms_ids[2]
+        
+        
         else:    
           #means that is the begining and we don't have enough ids yet, then we need to copy from best template XY
           histograms_ids[1] = histograms_X_Y[previous_fish_1_id]
@@ -461,17 +474,6 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
         if len(Y_current_template_list) > 60:
           Y_current_template_list = Y_current_template_list[-60:]       
 
-        
-     
-        '''cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-        cov1 = cov(templates_of_ID1)
-        cov2 = cov(templates_of_ID2)
-        
-        if cov1 > 7:
-          templates_of_ID1 = best_histogram_ids_1.copy()
-        if cov2 > 7:
-          templates_of_ID2 = best_histogram_ids_2.copy()'''
-        
         
         t_stat, p_val = stats.ttest_ind(templates_of_ID1 + X_current_template_list, templates_of_ID2 + Y_current_template_list, equal_var=False)
         option1 = p_val
