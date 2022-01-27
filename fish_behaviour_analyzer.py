@@ -348,18 +348,12 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
                 histograms_X_Y[previous_fish_1_id] = histograms_X_Y[previous_fish_1_id][-60:]
               
             else:
-              if len(histograms_ids[int(previous_fish_1_id)]) == 60:             
-                avg = statistics.mean(histograms_ids[int(previous_fish_1_id)])                
-                                
-              histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']])               
-              
-              if len(histograms_ids[int(previous_fish_1_id)]) > 60:               
-                if histograms[row['original_index']] > avg*1.2 or histograms[row['original_index']] < avg*0.8:                                 
-                  histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][:60]
-                else:
-                  histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][1:]              
-            
-              
+              if len(histograms_ids[int(previous_fish_1_id)]) == 60:               
+                avg = statistics.mean(histograms_ids[int(previous_fish_1_id)])               
+                if histograms[row['original_index']] < avg*1.2 and histograms[row['original_index']] > avg*0.8:
+                  histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']])                                                   
+                  histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][1:]
+                           
           else: #the same as above, but in a inverse way
             dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id          
             
@@ -371,18 +365,9 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
               
             else:
               if len(histograms_ids[int(previous_fish_2_id)]) == 60:
-                #cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-                #cov2_b = cov(histograms_ids[int(previous_fish_2_id)])
-                avg = statistics.mean(histograms_ids[int(previous_fish_2_id)])
-              
-              histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']])
-                              
-              if len(histograms_ids[int(previous_fish_2_id)]) > 60:
-                #cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-                #cov2_a= cov(histograms_ids[int(previous_fish_2_id)][1:])                
-                if histograms[row['original_index']] > avg*1.2 or histograms[row['original_index']] < avg*0.8:                                 
-                  histograms_ids[int(previous_fish_2_id)] = histograms_ids[int(previous_fish_2_id)][:60]
-                else:
+                avg = statistics.mean(histograms_ids[int(previous_fish_2_id)])               
+                if histograms[row['original_index']] < avg*1.2 and histograms[row['original_index']] > avg*0.8:
+                  histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']])                                                   
                   histograms_ids[int(previous_fish_2_id)] = histograms_ids[int(previous_fish_2_id)][1:]
           
                   
