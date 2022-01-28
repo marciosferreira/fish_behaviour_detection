@@ -18,6 +18,7 @@ fish_0_history = []
 fish_1_history = []
 make_copy_last_seen = True
 first = True
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 calculo_area = []
 went_ok = 0
@@ -342,31 +343,37 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
             
             
                    
-            if active == "XY":  
-              histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
-              if len(histograms_X_Y[previous_fish_1_id]) > 60:
-                histograms_X_Y[previous_fish_1_id] = histograms_X_Y[previous_fish_1_id][-60:]
-              
+            if active == "XY":
+              if len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:
+                avg1 = statistics.mean(histograms_ids[1])
+                avg2 = statistics.mean(histograms_ids[2])
+                if (histograms[row['original_index']] < avg1*1.5 and histograms[row['original_index']] < avg2*1.5) and (histograms[row['original_index']] > avg1*0.5 and histograms[row['original_index']] > avg2*0.5):    
+                  histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              else:
+                histograms_X_Y[previous_fish_1_id].append(histograms[row['original_index']])               
+          
             else:
               if len(histograms_ids[int(previous_fish_1_id)]) == 60:               
                 avg = statistics.mean(histograms_ids[int(previous_fish_1_id)])               
-                if histograms[row['original_index']] < avg*1.2 and histograms[row['original_index']] > avg*0.8:
+                if histograms[row['original_index']] < avg*1.5 and histograms[row['original_index']] > avg*0.5:
                   histograms_ids[int(previous_fish_1_id)].append(histograms[row['original_index']])                                                   
                   histograms_ids[int(previous_fish_1_id)] = histograms_ids[int(previous_fish_1_id)][1:]
                            
           else: #the same as above, but in a inverse way
-            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id          
-            
+            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id           
               
-            if active == "XY":    
-              histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) 
-              if len(histograms_X_Y[previous_fish_2_id]) > 60:
-                histograms_X_Y[previous_fish_2_id] = histograms_X_Y[previous_fish_2_id][-60:]
-              
+            if active == "XY":
+              if len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:
+                avg1 = statistics.mean(histograms_ids[1])
+                avg2 = statistics.mean(histograms_ids[2])
+                if (histograms[row['original_index']] < avg1*1.5 and histograms[row['original_index']] < avg2*1.5) and (histograms[row['original_index']] > avg1*0.5 and histograms[row['original_index']] > avg2*0.5):    
+                  histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) #((np.add((np.multiply(previous_histograms_X_Y[previous_fish_1_id], 3)), histograms[row['original_index']]) / 4)).astype(np.float32)
+              else:
+                histograms_X_Y[previous_fish_2_id].append(histograms[row['original_index']]) 
             else:
               if len(histograms_ids[int(previous_fish_2_id)]) == 60:
                 avg = statistics.mean(histograms_ids[int(previous_fish_2_id)])               
-                if histograms[row['original_index']] < avg*1.2 and histograms[row['original_index']] > avg*0.8:
+                if histograms[row['original_index']] < avg*1.5 and histograms[row['original_index']] > avg*0.5:
                   histograms_ids[int(previous_fish_2_id)].append(histograms[row['original_index']])                                                   
                   histograms_ids[int(previous_fish_2_id)] = histograms_ids[int(previous_fish_2_id)][1:]
           
@@ -374,7 +381,7 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
         if active == "XY":          
           previous_histograms_X_Y = histograms_X_Y.copy()
           if len(histograms_X_Y[previous_fish_1_id]) == 60 and len(histograms_X_Y[previous_fish_2_id]) == 60 and len(histograms_ids[1]) == 60 and len(histograms_ids[2]) == 60:          
-            t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
+            t_stat, p_val_first = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=False)
             cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
             cov1 = cov(histograms_X_Y[previous_fish_1_id])
             cov2 = cov(histograms_X_Y[previous_fish_2_id])
@@ -382,22 +389,20 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
             best_cov1 = cov(histograms_ids[1])
             best_cov2 = cov(histograms_ids[2])
             best_cov1_2 = best_cov1 + best_cov2
-            if p_val_first > 0.01 or cov1_2 < best_cov1_2*0.8 or cov1_2 > best_cov1_2*1.2:
-              continue                       
+            '''if p_val_first > 0.001: # or cov1_2 < best_cov1_2*0.5 or cov1_2 > best_cov1_2*1.5:
+              continue '''                      
        
           else:
             if len(histograms_X_Y[previous_fish_1_id]) < 60 or len(histograms_X_Y[previous_fish_2_id]) < 60:
               continue
             else:  # here we can acquire the first template
-              t_stat_xy_init, p_val_xy_init = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=True)
+              t_stat_xy_init, p_val_xy_init = stats.ttest_ind(histograms_X_Y[previous_fish_1_id], histograms_X_Y[previous_fish_2_id], equal_var=False)
               cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
               cov1 = cov(histograms_X_Y[previous_fish_1_id])
-              cov2 = cov(histograms_X_Y[previous_fish_2_id])     
-              
-              print("the ppppp value")
-              print(p_val_xy_init)
-              if p_val_xy_init > 0.01:
-                continue           
+              cov2 = cov(histograms_X_Y[previous_fish_2_id])
+             
+              '''if p_val_xy_init > 0.001:
+                continue '''          
             
         else:          
           continue
@@ -417,7 +422,7 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           continue               
        
         cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-        t_stat_filter, p_val_filter = stats.ttest_ind(histograms_ids[1], histograms_ids[2], equal_var=True)          
+        t_stat_filter, p_val_filter = stats.ttest_ind(histograms_ids[1], histograms_ids[2], equal_var=False)          
         cov1 = cov(histograms_ids[1])
         cov2 = cov(histograms_ids[2])        
            
@@ -429,27 +434,29 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
         templates_of_ID2 = histograms_ids[2]      
              
         X_current_template_list = histograms_X_Y['X'] 
-        Y_current_template_list = histograms_X_Y['Y']      
+        Y_current_template_list = histograms_X_Y['Y']
+        
+        data_numbers = templates_of_ID1 + templates_of_ID2 + X_current_template_list + Y_current_template_list     
 
+        df = pd.DataFrame({'score': data_numbers,
+                   'group': np.repeat(['id1', 'id2', 'X', 'Y'], repeats=60)}) 
         
-        t_stat, p_val = stats.ttest_ind(X_current_template_list, templates_of_ID1, equal_var=False)
-        option1 = p_val
-        t_stat, p_val = stats.ttest_ind(X_current_template_list, templates_of_ID2, equal_var=False)
-        option2 = p_val
-        t_stat, p_val = stats.ttest_ind(Y_current_template_list, templates_of_ID1, equal_var=False)
-        option3 = p_val
-        t_stat, p_val = stats.ttest_ind(Y_current_template_list, templates_of_ID2, equal_var=False)
-        option4 = p_val
+        import scikit_posthocs as sp
+        tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
         
-        minimum =  min(option1, option2, option3, option4)
-        if minimum == option1 or minimum == option4:        
-          option = '1Y'
-        else:
-          option = '1X'
-           
+        print(tukey)
         
+        X1 = tukey['X'][0]
+        X2 = tukey['X'][1]
+        Y1 = tukey['Y'][0]
+        Y2 = tukey['Y'][1]
+        
+             
+        cv2.waitKey(0)
+       
+        minimum =  min(X1, X2, Y1, Y2)       
                
-        if option == '1X':
+        if minimum == X2 or minimum == Y1:
           dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(1) 
           dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(2) 
         else:
@@ -492,6 +499,7 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
     previous_df = dframe.copy()  
     
+    cv2.waitKey(0)
     
     if cv2.waitKey(25) & 0xFF == ord('q'):
       break
