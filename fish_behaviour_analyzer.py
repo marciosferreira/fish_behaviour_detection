@@ -2,6 +2,7 @@ quadr = 'D'
 import scipy.stats as stats
 import cv2
 import statistics
+import seaborn as sns
 from cv2 import waitKey 
 import numpy as np
 import math
@@ -342,15 +343,24 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           if active == "XY":
             print(dframe['fish_id'][row['original_index']])                          
             histograms_X_Y[dframe['fish_id'][row['original_index']]].append(histograms[int(row['original_index'])])               
-          else:
-            #print(int(dframe['fish_id'][row['original_index']]))            
-            histograms_ids[int(dframe['fish_id'][row['original_index']])].append(histograms[int(dframe['fish_id'][row['original_index']])])
-            if len(histograms_ids[int(dframe['fish_id'][row['original_index']])]) > 60:
-              histograms_ids[int(dframe['fish_id'][row['original_index']])] = histograms_ids[int(dframe['fish_id'][row['original_index']])][-60:]       
-        
+          
         #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
         if active == 'XY' and len(histograms_X_Y['Y']) == 60 and len(histograms_X_Y['X']) == 60:
-          active = 'id'    
+          t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X'], histograms_X_Y['Y'], equal_var=True)
+          cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
+          cov1 = cov(histograms_X_Y['Y'])
+          cov2 = cov(histograms_X_Y['X'])
+          print(cov1)
+          print(cov2)
+          print(p_val_filter)
+             
+          if cov1 < 10 and cov2 < 10 and p_val_filter < 0.001:
+            active = 'id'
+          else:
+            histograms_X_Y['Y'] = histograms_X_Y['Y'][-59:]
+            histograms_X_Y['X'] = histograms_X_Y['X'][-59:]
+            break
+                
           
         ############################################################################################################
         # the minimum values were reached in lists (id and XY), then we go ahead to choose which fish is which,
@@ -378,14 +388,13 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           X_current_template_list = histograms_X_Y['X'] 
           Y_current_template_list = histograms_X_Y['Y']
           
-          def reject_outliers(data, m=2
-                              .):
+          def reject_outliers(data, m=6.):
               d = np.abs(data - np.median(data))
               mdev = np.median(d)
               s = d / (mdev if mdev else 1.)
               return data[s < m].tolist()          
           
-          templates_of_ID1, templates_of_ID2, X_current_template_list, Y_current_template_list = reject_outliers(np.array(templates_of_ID1)), reject_outliers(np.array(templates_of_ID2)), reject_outliers(np.array(X_current_template_list)), reject_outliers(np.array(Y_current_template_list))     
+          #templates_of_ID1, templates_of_ID2, X_current_template_list, Y_current_template_list = reject_outliers(np.array(templates_of_ID1)), reject_outliers(np.array(templates_of_ID2)), reject_outliers(np.array(X_current_template_list)), reject_outliers(np.array(Y_current_template_list))     
 
           df1 = pd.DataFrame({'score': templates_of_ID1,
                     'group': 'id1'}) 
@@ -400,8 +409,15 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
           df4 = pd.DataFrame({'score': Y_current_template_list,
                     'group': 'Y'}) 
           print(df4.size)
-          df = pd.concat([df1, df2, df3, df4])          
-       
+          df = pd.concat([df1, df2, df3, df4])
+          
+          print(df)
+          
+          #stre = sns.boxplot(x="score", y="group", data=df)
+          sns.boxplot(x="score", y="group", data=df)
+          plt.show() 
+                   
+          #cv2.waitKey(0)
           import scikit_posthocs as sp
           tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
           
