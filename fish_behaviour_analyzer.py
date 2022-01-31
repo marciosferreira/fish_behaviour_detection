@@ -1,5 +1,9 @@
 quadr = 'D'
 import scipy.stats as stats
+import scikit_posthocs as sp
+from scipy.stats import skew
+from scipy.stats import kurtosis
+from scipy.stats import iqr
 import cv2
 import statistics
 import seaborn as sns
@@ -50,7 +54,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(11000,10000000,1):   #3000 to 4000
+for idx_frame in range(1100,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -200,7 +204,15 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )      
        
-        
+        final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]        
+        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
+        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
+        hist = hist[:185]
+        hist_1 = hist[:146]       
+        hist_2 = hist[146:]      
+        final=sum(hist_1)       
+        final_grey=final[0]
+       
       
         if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
           quadrant_value = "A"
@@ -345,16 +357,20 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
             histograms_X_Y[dframe['fish_id'][row['original_index']]].append(histograms[int(row['original_index'])])               
           
         #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
+        print(len(histograms_X_Y['X']))
+        print(len(histograms_X_Y['Y']))
         if active == 'XY' and len(histograms_X_Y['Y']) == 60 and len(histograms_X_Y['X']) == 60:
-          t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X'], histograms_X_Y['Y'], equal_var=True)
+          t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X'], histograms_X_Y['Y'], equal_var=False)
           cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
           cov1 = cov(histograms_X_Y['Y'])
           cov2 = cov(histograms_X_Y['X'])
-          print(cov1)
+          print(kurtosis(histograms_X_Y['X']))
+          print(kurtosis(histograms_X_Y['Y']))
           print(cov2)
           print(p_val_filter)
+          print(t_stat_filter)
              
-          if cov1 < 10 and cov2 < 10 and p_val_filter < 0.001:
+          if p_val_filter < 0.01 and abs(t_stat_filter) > 10 and kurtosis(histograms_X_Y['Y']) < 1 and kurtosis(histograms_X_Y['Y']) > 0 and kurtosis(histograms_X_Y['X']) < 1 and kurtosis(histograms_X_Y['X']) > 0:  
             active = 'id'
           else:
             histograms_X_Y['Y'] = histograms_X_Y['Y'][-59:]
@@ -398,27 +414,45 @@ for idx_frame in range(11000,10000000,1):   #3000 to 4000
 
           df1 = pd.DataFrame({'score': templates_of_ID1,
                     'group': 'id1'}) 
-          print("sizessssssssss")
-          print(df1.size)
+          print("data")
+          #print(df1.size)
+          k2, p = stats.normaltest(templates_of_ID1)
+          #print(p)
+          #print(iqr(templates_of_ID1))
           df2 = pd.DataFrame({'score': templates_of_ID2,
                     'group': 'id2'}) 
-          print(df2.size)
+          #print(df2.size)
+          k2, p = stats.normaltest(templates_of_ID2)
+          #print(p)
+          #print(iqr(templates_of_ID2))
           df3 = pd.DataFrame({'score': X_current_template_list,
                     'group': 'X'}) 
-          print(df3.size)
+          #print(df3.size)
+          k2, p = stats.normaltest(X_current_template_list)
+          #print(p)
+          
+          print("kurtosis")
+          print(kurtosis(X_current_template_list))
+          #sns.distplot(X_current_template_list)
+
           df4 = pd.DataFrame({'score': Y_current_template_list,
                     'group': 'Y'}) 
-          print(df4.size)
+          #print(df4.size)
+          k2, p = stats.normaltest(Y_current_template_list)
+          #print(p)
+          print("kurtosis")
+          print(kurtosis(Y_current_template_list))
+          #sns.distplot(Y_current_template_list)
           df = pd.concat([df1, df2, df3, df4])
           
-          print(df)
+          
           
           #stre = sns.boxplot(x="score", y="group", data=df)
-          sns.boxplot(x="score", y="group", data=df)
+          sns.violinplot(x="score", y="group", data=df)
           plt.show() 
                    
           #cv2.waitKey(0)
-          import scikit_posthocs as sp
+          
           tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
           
           
