@@ -5,6 +5,9 @@ from scipy.stats import skew
 from scipy.stats import kurtosis
 from scipy.stats import iqr
 import cv2
+from skimage.morphology import medial_axis
+from skimage.morphology import skeletonize
+
 import statistics
 import seaborn as sns
 from cv2 import waitKey 
@@ -54,7 +57,7 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
-for idx_frame in range(1100,10000000,1):   #3000 to 4000
+for idx_frame in range(5700,10000000,1):   #3000 to 4000
   print(idx_frame)
     
   
@@ -67,8 +70,8 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
     first_fish = []
     second_fish = []
 
-    imzz = cv2.resize(frame, (780, 780))              # Resize image   
-    cv2.imshow('Main',imzz)
+    #imzz = cv2.resize(frame, (780, 780))              # Resize image   
+    #cv2.imshow('Main',imzz)
     #cv2.waitKey(1)
      
     #########################################################################
@@ -83,7 +86,7 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
           
-    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)  
+    ret,thresh = cv2.threshold(diff,10,255,cv2.THRESH_BINARY)  
     
 
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -106,14 +109,57 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
     template_blur = []
     template_dark = []
     counter = 0
+    skeleton_list = []
     
     for idx, cnt in enumerate(contours):
                   
       area = cv2.contourArea(cnt) 
       
-      #calculate aspect ratio for template quality filtering   
+      #calculate aspect ratio for template quality filtering
+      
+        
 
-      if area > 200 and area < 1500:        
+      if area > 200 and area < 1500:
+        
+        drawn_image_for_skeleton = blank_image.copy()
+        drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)
+        
+        #cv2.imshow("skl", drawn_image_for_skeleton)
+        bw_mainImage_sk = cv2.cvtColor(drawn_image_for_skeleton, cv2.COLOR_BGR2GRAY)
+        # Creating kernel
+        #kernel = np.ones((5, 5), np.uint8)  
+        # Using cv2.erode() method 
+        #image = cv2.erode(bw_mainImage_sk, kernel) 
+        #image2 = cv2.dilate(image, kernel)
+        
+        #cv2.imshow("skl_final_eroded", bw_mainImage_sk)
+
+        binarizedImage = bw_mainImage_sk / 255
+
+        #skeleton = medial_axis(bw_mainImage_sk).astype(np.uint8)
+        skeleton = skeletonize(binarizedImage)
+        
+        #fig, axes = plt.subplots(1, 1, figsize=(18, 10), sharex=True, sharey=True)
+        #ax = axes.ravel()
+
+        #plt.imshow(skeleton, cmap=plt.cm.gray)
+     
+       
+
+      
+        #plt.show()
+        skeleton = (skeleton*255).astype(np.uint8)
+    
+        #cv2.waitKey(0)              
+        #skeleton_coords = np.argwhere(skeleton)
+        skeleton_coords = list(zip(*np.nonzero(skeleton)))
+        #nzCount = cv2.countNonZero(skeleton)
+        
+        #cv2.waitKey(0)
+       
+        #cv2.imshow("skl_final", skeleton)
+       
+                
               
         #will be used to predict the size of the fish excluding the tail part
         fish_total_pixels = len(cnt)
@@ -168,7 +214,55 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
         
         #the head coordinates
         aver_head = (aver_head[0][0], aver_head[0][1])
+  
+        #cv2.waitKey(0)
+        
+        #sort skeleton by next coordinate, starting from head
+        #############################
+        #skeleton_coords = skeleton_coords.tolist() 
+        '''print("xxxxxxxxxxx")
+        print(skeleton_coords)
+        distances_skeleton_to_head = []
+        for l in skeleton_coords:                  
+          distance = math.sqrt(   (aver_head[0]-l[1])**2 + (aver_head[1]-l[0])**2    )
+          distances_skeleton_to_head.append(distance)
+        
+        #get farthest value
+        min_value = min(distances_skeleton_to_head)
+        min_index_skeleton = distances_skeleton_to_head.index(min_value)       
+        min_skl_coord = skeleton_coords.pop(min_index_skeleton)           
+        distances_skeleton_to_head.pop(min_index_skeleton)'''
+        
+       
+        sorted_skeleton = []               
+        while len(skeleton_coords) > 1:
+          distances_skeleton_from_head = []
+          for l in skeleton_coords:
+           
+            distance = math.sqrt(   (aver_head[0]-l[1])**2 + (aver_head[1]-l[0])**2    )
+            distances_skeleton_from_head.append(distance)
+          min_value = min(distances_skeleton_from_head)
+          min_index_skeleton = distances_skeleton_from_head.index(min_value)
+          min_skl_coord = skeleton_coords.pop(min_index_skeleton)          
+          sorted_skeleton.append(min_skl_coord)
+      
+        #drawn_image_2 = frame.copy()
+        #cv2.circle(drawn_image_2, (sorted_skeleton[0][1], sorted_skeleton[0][0]), 2, (0, 0, 255), -1)
+        #cv2.imshow("testexxx", drawn_image_2 )
+        #############################
+        #print(sorted_skeleton)
+        #drawn_image_2 = frame.copy()
 
+        #cv2.drawContours(drawn_image_2, [skeleton], -1, color=(0,0,0),thickness=2)
+        #cv2.circle(frame, (sorted_skeleton[-1][1], sorted_skeleton[-1][0]), 2, (0, 255, 0), -1)
+        
+        #cv2.imshow("teste", skeleton )
+        #cv2.imshow("framesssss", frame )
+        #print(skeleton_coords)
+        #cv2.waitKey(0)
+
+        
+        
 
         #calculate the center of mass of the fish excluding the tail
         distances_cm = []
@@ -204,14 +298,7 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
 
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )      
        
-        final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]        
-        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
-        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
-        hist = hist[:185]
-        hist_1 = hist[:146]       
-        hist_2 = hist[146:]      
-        final=sum(hist_1)       
-        final_grey=final[0]
+       
        
       
         if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
@@ -232,11 +319,12 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area_rec)        
-        histograms.append(fish_pectoral_lenght)   # need to fix afterwards
+        histograms.append(fish_pectoral_lenght)  
         countours_idx.append(0)
-        template_area.append(area_rec)
+        template_area.append(area)
         template_blur.append(0)
-        template_dark.append(0)        
+        template_dark.append(0)
+        skeleton_list.append(sorted_skeleton)       
                       
         counter +=1
     
@@ -256,8 +344,7 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
     #create a XY if is the very begining of the script
     
     unique_quadrants = dframe.quadrant_local.unique()
-    if previous_df is None:
-      print("666666666666666666666666")
+    if previous_df is None:     
       active = "XY"      
       previous_df = dframe.copy()           
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]
@@ -370,7 +457,7 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
           print(p_val_filter)
           print(t_stat_filter)
              
-          if p_val_filter < 0.01 and abs(t_stat_filter) > 10 and kurtosis(histograms_X_Y['Y']) < 1 and kurtosis(histograms_X_Y['Y']) > 0 and kurtosis(histograms_X_Y['X']) < 1 and kurtosis(histograms_X_Y['X']) > 0:  
+          if p_val_filter < 0.01 and abs(t_stat_filter) > 10 : #and kurtosis(histograms_X_Y['Y']) < 1 and kurtosis(histograms_X_Y['Y']) > 0 and kurtosis(histograms_X_Y['X']) < 1 and kurtosis(histograms_X_Y['X']) > 0:  
             active = 'id'
           else:
             histograms_X_Y['Y'] = histograms_X_Y['Y'][-59:]
@@ -395,14 +482,25 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
           cov2 = cov(histograms_ids[2])        
             
           current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
-          current_fish_0 = current_fish.iloc[0]
-          current_fish_1 = current_fish.iloc[1]      
+          current_fish_0 = current_fish.iloc[0]          
+          current_fish_1 = current_fish.iloc[1]
+               
 
           templates_of_ID1 = histograms_ids[1]
-          templates_of_ID2 = histograms_ids[2]      
-              
-          X_current_template_list = histograms_X_Y['X'] 
+          templates_of_ID1 = np.array(templates_of_ID1)
+    
+          
+          templates_of_ID2 = histograms_ids[2]
+          templates_of_ID2 = np.array(templates_of_ID2)
+         
+      
+          X_current_template_list = histograms_X_Y['X']
+          X_current_template_list = np.array(X_current_template_list)  
+          
           Y_current_template_list = histograms_X_Y['Y']
+          Y_current_template_list = np.array(Y_current_template_list)
+          
+          
           
           def reject_outliers(data, m=6.):
               d = np.abs(data - np.median(data))
@@ -474,14 +572,24 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
       #####################################################################################   
     #block 6
     # Time to draw everything on a template
-    drawn_image = blank_image.copy()
-    drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
+    drawn_image = frame.copy()
+    #drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
 
 
       
     for c in idx_local[:8]:
+      
       #tail plot
-      cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
+      #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
+      lenght = len(skeleton_list[c])      
+      step = int(lenght*.70/4)
+      
+        
+      
+      for x in range(-1, -step*4, -(step)):
+        #print(skeleton_list[c][x])
+        
+        cv2.circle(drawn_image, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
 
       #head
       cv2.circle(drawn_image, fish_head_local[c], 2, (0, 255, 0), -1)
@@ -489,13 +597,15 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
       #center of mass
       cv2.circle(drawn_image, position_fish_local[c], 2, (0, 165, 255), -1)
       
+      
+      
 
     position_list = dframe.position_fish_local.tolist()
     fish_id = dframe.fish_id.tolist()
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(drawn_image,str(fish_id[indice]),(position_list[indice]), font, 1,(255,255,255),2)
+      cv2.putText(drawn_image,str(fish_id[indice]),(position_list[indice]), font, 0.5,(0,0,0),1)
     
 
          
@@ -504,7 +614,7 @@ for idx_frame in range(1100,10000000,1):   #3000 to 4000
 
 
     #show the image with filtered countours plotted
-    imS = cv2.resize(drawn_image, (960, 540))              # Resize image   
+    imS = cv2.resize(drawn_image, (880, 880))              # Resize image   
     cv2.imshow('Frame',imS)
 
     previous_df = dframe.copy()  
