@@ -1,4 +1,4 @@
-quadr = 'D'
+quadr = 'B'
 import scipy.stats as stats
 import scikit_posthocs as sp
 from scipy.stats import skew
@@ -7,7 +7,8 @@ from scipy.stats import iqr
 import cv2
 from skimage.morphology import medial_axis
 from skimage.morphology import skeletonize
-
+the_x = []
+the_y = []
 import statistics
 import seaborn as sns
 from cv2 import waitKey 
@@ -37,7 +38,7 @@ pd.set_option('display.max_columns', None)
 cap = cv2.VideoCapture('C:/Users/marci/Desktop/20191121_1454_iCab_L_C.avi')
 background_image = cv2.imread('C:/Users/marci/Desktop/background_1.jpg')
 bw_back = cv2.cvtColor(background_image, cv2.COLOR_BGR2GRAY)
-bw_back = cv2.GaussianBlur(bw_back, (9,9) ,0) 
+bw_back = cv2.GaussianBlur(bw_back, (21,21) ,0) 
 
 #create a blank image to plot everything on
 blank_image = np.zeros((bw_back.shape[0], bw_back.shape[1], 3), np.uint8)
@@ -57,8 +58,15 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 # Read until video is completed
+
+backSub = cv2.createBackgroundSubtractorKNN(history=200, dist2Threshold=2000, detectShadows=True)
+
+
 for idx_frame in range(5700,10000000,1):   #3000 to 4000
   print(idx_frame)
+  
+  
+  
     
   
   cap.set(1, idx_frame)
@@ -66,6 +74,20 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
   # Capture frame-by-frame
   ret, frame = cap.read()
   if ret == True:
+    
+    fgMask = backSub.apply(frame)
+    
+    if idx_frame < 5700+200:
+      continue
+    
+    kernel = np.ones((5, 5), np.uint8)
+    fgMask_m = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel) 
+    #fgMask_m = cv2.morphologyEx(fgMask_m, cv2.MORPH_OPEN, kernel)
+    
+    cv2.imshow("mask", fgMask)
+    cv2.imshow("mask_m", fgMask_m)
+  
+    
     
     first_fish = []
     second_fish = []
@@ -82,14 +104,25 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
 
     # Display the resulting frame
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    bw_mainImage = cv2.GaussianBlur(bw_mainImage, (9,9) ,0)
+    #bw_mainImage = cv2.GaussianBlur(bw_mainImage, (9,9) ,0)
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
+    
+    #diff[408:440, :] = 0
+    #diff[:, 415:447] = 0
+    #diff[:, 835:] = 0
+
           
-    ret,thresh = cv2.threshold(diff,10,255,cv2.THRESH_BINARY)  
+    ret,thresh = cv2.threshold(diff,9,255,cv2.THRESH_BINARY)
+    
+    kernel = np.ones((5, 5), np.uint8)  
+    # Using cv2.erode() method
+    #thresh = cv2.erode(thresh, kernel, iterations = 1) 
+    
+    #thresh = cv2.dilate(thresh, kernel, iterations = 1)  
     
 
-    contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(fgMask_m, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     
     
 
@@ -119,7 +152,7 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       
         
 
-      if area > 200 and area < 1500:
+      if area > 100 and area < 1500:
         
         drawn_image_for_skeleton = blank_image.copy()
         drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)
@@ -245,7 +278,11 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
           min_index_skeleton = distances_skeleton_from_head.index(min_value)
           min_skl_coord = skeleton_coords.pop(min_index_skeleton)          
           sorted_skeleton.append(min_skl_coord)
-      
+
+        
+        
+        
+        
         #drawn_image_2 = frame.copy()
         #cv2.circle(drawn_image_2, (sorted_skeleton[0][1], sorted_skeleton[0][0]), 2, (0, 0, 255), -1)
         #cv2.imshow("testexxx", drawn_image_2 )
@@ -574,10 +611,12 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
     # Time to draw everything on a template
     drawn_image = frame.copy()
     #drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
-
-
       
     for c in idx_local[:8]:
+      
+      print("the result")
+      the_id = dframe['fish_id'].iloc[c]
+      
       
       #tail plot
       #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
@@ -585,11 +624,49 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       step = int(lenght*.70/4)
       
         
-      
+      list_of_index = []      
       for x in range(-1, -step*4, -(step)):
-        #print(skeleton_list[c][x])
-        
+        list_of_index.append(x)
+      
+      for x in list_of_index:  
         cv2.circle(drawn_image, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
+        
+      if the_id == 1.0:
+        
+        def slope(x1, y1, x2, y2): # Line slope given two points:
+          return (y2-y1)/(x2-x1)
+
+        def angle(s1, s2): 
+          return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
+        
+        lineA = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-2]][1], skeleton_list[c][list_of_index[-2]][0]))
+        lineB = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-4]][1], skeleton_list[c][list_of_index[-4]][0]))
+        print("the lines")
+        print(lineA[0][0])
+        print(lineA[0][1])
+        print(lineA[1][0])
+        print(lineA[1][1])
+        slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
+        slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
+        print(slope1)
+        print(slope2)
+        ang = angle(slope1, slope2)     
+        print('Angle in degrees = ', ang)
+        the_x.append(idx_frame)
+        the_y.append(ang)
+        
+        time_x        = the_x
+        amplitude   = the_y 
+        print("the ammmmmmp")         
+        plt.plot(time_x, amplitude)
+        print(amplitude)
+        plt.title('Sine wave')
+        plt.xlabel('Time')
+        plt.ylabel('Amplitude = sin(time)')
+        plt.grid(True, which='both')
+        plt.axhline(y=0, color='k')
+        plt.pause(0.05)
+        plt.show(block=False)
 
       #head
       cv2.circle(drawn_image, fish_head_local[c], 2, (0, 255, 0), -1)
@@ -598,6 +675,27 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       cv2.circle(drawn_image, position_fish_local[c], 2, (0, 165, 255), -1)
       
       
+    '''
+      def slope(x1, y1, x2, y2): # Line slope given two points:
+        return (y2-y1)/(x2-x1)
+
+      def angle(s1, s2): 
+        return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
+
+      lineA = (fish_head_local[], (1.6, 3))
+      lineB = ((1.6, 3), (2, 3.6))
+
+      slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
+      slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
+
+      ang = angle(slope1, slope2)
+      print('Angle in degrees = ', ang)
+      
+      '''
+    
+    
+    
+    
       
 
     position_list = dframe.position_fish_local.tolist()

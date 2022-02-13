@@ -1,23 +1,17 @@
-import cv2
-import numpy as np
+import math
 
-# Load image, create mask, and draw white circle on mask
+def slope(x1, y1, x2, y2): # Line slope given two points:
+    return (y2-y1)/(x2-x1)
 
+def angle(s1, s2): 
+    return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
 
-# Load the images
-img1 = cv2.imread('C:/Users/marci/Pictures/Camera Roll/WIN_20210225_13_09_26_Pro.jpg')
-img2 = cv2.imread('C:/Users/marci/Pictures/Camera Roll/WIN_20210225_13_09_26_Pro.jpg')
+lineA = ((1, 1), (3.5, 3))
+lineB = ((2, 2), (2.5, 3))
 
-# Convert it to HSV
-img1_hsv = cv2.cvtColor(img1, cv2.COLOR_BGR2HSV)
-img2_hsv = cv2.cvtColor(img2, cv2.COLOR_BGR2HSV)
+slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
+slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
 
-# Calculate the histogram and normalize it
-hist_img1 = cv2.calcHist([img1_hsv], [0,1], None, [180,256], [0,180,0,256])
-cv2.normalize(hist_img1, hist_img1, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-hist_img2 = cv2.calcHist([img2_hsv], [0,1], None, [180,256], [0,180,0,256])
-cv2.normalize(hist_img2, hist_img2, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+ang = angle(slope1, slope2)
+print('Angle in degrees = ', ang)
 
-# find the metric value
-metric_val = cv2.compareHist(hist_img2, hist_img2, cv2.HISTCMP_INTERSECT)
-print(metric_val)
