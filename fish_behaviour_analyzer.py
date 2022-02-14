@@ -9,6 +9,8 @@ from skimage.morphology import medial_axis
 from skimage.morphology import skeletonize
 the_x = []
 the_y = []
+min_ids = 0
+from scipy.interpolate import splprep, splev
 import statistics
 import seaborn as sns
 from cv2 import waitKey 
@@ -37,8 +39,9 @@ is_first_iteraction = False
 pd.set_option('display.max_columns', None)  
 cap = cv2.VideoCapture('C:/Users/marci/Desktop/20191121_1454_iCab_L_C.avi')
 background_image = cv2.imread('C:/Users/marci/Desktop/background_1.jpg')
-bw_back = cv2.cvtColor(background_image, cv2.COLOR_BGR2GRAY)
-bw_back = cv2.GaussianBlur(bw_back, (21,21) ,0) 
+frame_contrast_bg = cv2.addWeighted(background_image, 1.3, np.zeros(background_image.shape, background_image.dtype), 0, 0)
+bw_back = cv2.cvtColor(frame_contrast_bg, cv2.COLOR_BGR2GRAY)
+bw_back = cv2.GaussianBlur(bw_back, (15,15) ,0) 
 
 #create a blank image to plot everything on
 blank_image = np.zeros((bw_back.shape[0], bw_back.shape[1], 3), np.uint8)
@@ -59,10 +62,12 @@ if (cap.isOpened()== False):
 
 # Read until video is completed
 
-backSub = cv2.createBackgroundSubtractorKNN(history=200, dist2Threshold=2000, detectShadows=True)
+#backSub = cv2.createBackgroundSubtractorKNN(history=500, dist2Threshold=600, detectShadows=True)
+#backSubNS = cv2.createBackgroundSubtractorKNN(history=50, dist2Threshold=50, detectShadows=True)
 
+start_frame  = 2000
 
-for idx_frame in range(5700,10000000,1):   #3000 to 4000
+for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
   print(idx_frame)
   
   
@@ -75,18 +80,27 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
   ret, frame = cap.read()
   if ret == True:
     
-    fgMask = backSub.apply(frame)
+    frame_contrast = cv2.addWeighted(frame, 1.3, np.zeros(frame.shape, frame.dtype), 0, 0)
+    #frame = cv2.fastNlMeansDenoisingColored(frame,None,20,10,7,21)
+
+    #cv2.imshow("con", frame_contrast)
+    #cv2.waitKey(0)
     
-    if idx_frame < 5700+200:
-      continue
+    #fgMask = backSub.apply(frame_contrast)
+    #fgMaskNS = backSubNS.apply(frame_contrast)
     
-    kernel = np.ones((5, 5), np.uint8)
-    fgMask_m = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel) 
-    #fgMask_m = cv2.morphologyEx(fgMask_m, cv2.MORPH_OPEN, kernel)
+    #cv2.imshow("con", fgMask)
     
-    cv2.imshow("mask", fgMask)
-    cv2.imshow("mask_m", fgMask_m)
-  
+    #if idx_frame < start_frame+50:
+     # continue
+    
+    #kernel = np.ones((5, 5), np.uint8)
+    #fgMask_m = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel) 
+    #fgMask_m_NS = cv2.morphologyEx(fgMaskNS, cv2.MORPH_OPEN, kernel)
+    
+    #cv2.imshow("mask", fgMask)
+    #cv2.imshow("fgMaskNS", fgMask_m)
+    #cv2.waitKey(0)
     
     
     first_fish = []
@@ -103,7 +117,7 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
     original_img = frame.copy()
 
     # Display the resulting frame
-    bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    bw_mainImage = cv2.cvtColor(frame_contrast, cv2.COLOR_BGR2GRAY)
     #bw_mainImage = cv2.GaussianBlur(bw_mainImage, (9,9) ,0)
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
@@ -113,16 +127,22 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
     #diff[:, 835:] = 0
 
           
-    ret,thresh = cv2.threshold(diff,9,255,cv2.THRESH_BINARY)
+    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)
     
     kernel = np.ones((5, 5), np.uint8)  
     # Using cv2.erode() method
     #thresh = cv2.erode(thresh, kernel, iterations = 1) 
     
-    #thresh = cv2.dilate(thresh, kernel, iterations = 1)  
     
+    thresh_close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel) 
+    #thresh_open = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 
-    contours, hierarchy = cv2.findContours(fgMask_m, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+      
+    #cv2.imshow('thresh',thresh)
+    cv2.imshow('thresh_close',thresh_close)
+    #cv2.imshow('thresh_open',thresh_open)
+
+    contours, hierarchy = cv2.findContours(thresh_close, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     
     
 
@@ -156,6 +176,10 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
         
         drawn_image_for_skeleton = blank_image.copy()
         drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)
+        
+        #ellipse = cv2.fitEllipse(cnt)
+        #cv2.ellipse(frame,ellipse,(0,255,0),2)
+
         
         #cv2.imshow("skl", drawn_image_for_skeleton)
         bw_mainImage_sk = cv2.cvtColor(drawn_image_for_skeleton, cv2.COLOR_BGR2GRAY)
@@ -477,39 +501,47 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
         for idx, row in filtered_df.iterrows():         
           print(active)
           if active == "XY":
-            print(dframe['fish_id'][row['original_index']])                          
+                             
             histograms_X_Y[dframe['fish_id'][row['original_index']]].append(histograms[int(row['original_index'])])               
           
         #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
         print(len(histograms_X_Y['X']))
         print(len(histograms_X_Y['Y']))
-        if active == 'XY' and len(histograms_X_Y['Y']) == 60 and len(histograms_X_Y['X']) == 60:
+        if active == 'XY' and len(histograms_X_Y['Y']) == 30 and len(histograms_X_Y['X']) == 30:
           t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X'], histograms_X_Y['Y'], equal_var=False)
           cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
           cov1 = cov(histograms_X_Y['Y'])
           cov2 = cov(histograms_X_Y['X'])
-          print(kurtosis(histograms_X_Y['X']))
-          print(kurtosis(histograms_X_Y['Y']))
-          print(cov2)
-          print(p_val_filter)
-          print(t_stat_filter)
-             
-          if p_val_filter < 0.01 and abs(t_stat_filter) > 10 : #and kurtosis(histograms_X_Y['Y']) < 1 and kurtosis(histograms_X_Y['Y']) > 0 and kurtosis(histograms_X_Y['X']) < 1 and kurtosis(histograms_X_Y['X']) > 0:  
+          #print(kurtosis(histograms_X_Y['X']))
+          #print(kurtosis(histograms_X_Y['Y']))
+          #print(cov2)
+          print("the p value:", p_val_filter)
+          print('the t:', t_stat_filter)
+          min_X = min(histograms_X_Y['X'])
+          min_y = min(histograms_X_Y['Y'])
+          min_xy = min(min_X,min_y)
+          print('the min')
+          print('the xy:', min_xy)
+          print('the id:', min_ids)
+          if p_val_filter < 0.01 and abs(t_stat_filter) > 5 and min_xy > min_ids*0.9 and kurtosis(histograms_X_Y['Y']) > -.3 and kurtosis(histograms_X_Y['X']) > -.3: # 1 and kurtosis(histograms_X_Y['X']) > 0:  
             active = 'id'
           else:
-            histograms_X_Y['Y'] = histograms_X_Y['Y'][-59:]
-            histograms_X_Y['X'] = histograms_X_Y['X'][-59:]
+            histograms_X_Y['Y'] = histograms_X_Y['Y'][-29:]
+            histograms_X_Y['X'] = histograms_X_Y['X'][-29:]
             break
                 
           
         ############################################################################################################
         # the minimum values were reached in lists (id and XY), then we go ahead to choose which fish is which,
         #but if we have no id values yet, as is the very begining, we need to copy them from xy.      
-          if len(histograms_ids[1]) < 60 or len(histograms_ids[2]) < 60:           
-            histograms_ids[1] = histograms_X_Y[previous_fish_1_id]                    
+          if len(histograms_ids[1]) < 30 or len(histograms_ids[2]) < 30:           
+            histograms_ids[1] = histograms_X_Y[previous_fish_1_id]
+            hist_id1_min = min(histograms_ids[1])                    
             dframe.loc[dframe.fish_id == previous_fish_1_id, "fish_id"] = float(1) 
-            histograms_ids[2] = histograms_X_Y[previous_fish_2_id]          
-            dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)              
+            histograms_ids[2] = histograms_X_Y[previous_fish_2_id]
+            hist_id2_min = min(histograms_ids[2])        
+            dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)
+            min_ids = min(hist_id1_min, hist_id2_min)             
               
         #############################################################################################################      
           # now we actually are going to decide which fish is which by statistcs          
@@ -600,12 +632,22 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
           minimum =  min(X1, X2, Y1, Y2)       
                 
           if minimum == X2 or minimum == Y1:
-            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(1) 
-            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(2) 
+            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(1)
+            histograms_ids[1] = histograms_X_Y['X']
+                         
+            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(2)
+            histograms_ids[2] = histograms_X_Y['Y']
+            
           else:
-            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(2) 
-            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(1)          
+            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(2)
+            histograms_ids[2] = histograms_X_Y['X'] 
+            
+            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(1)
+            histograms_ids[1] = histograms_X_Y['Y']         
 
+          min_X = min(histograms_X_Y['X'])
+          min_Y = min(histograms_X_Y['Y'])
+          min_ids = min(min_X, min_Y)
       #####################################################################################   
     #block 6
     # Time to draw everything on a template
@@ -614,7 +656,7 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       
     for c in idx_local[:8]:
       
-      print("the result")
+  
       the_id = dframe['fish_id'].iloc[c]
       
       
@@ -624,49 +666,82 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       step = int(lenght*.70/4)
       
         
-      list_of_index = []      
-      for x in range(-1, -step*4, -(step)):
-        list_of_index.append(x)
+      list_of_index = []
       
-      for x in list_of_index:  
-        cv2.circle(drawn_image, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
-        
-      if the_id == 1.0:
-        
-        def slope(x1, y1, x2, y2): # Line slope given two points:
-          return (y2-y1)/(x2-x1)
+      try: # if 1 == 1:      
+        for x in range(-1, -step*4, -(step)):
+          list_of_index.append(x)
+                  
+        for x in list_of_index:  
+          cv2.circle(drawn_image, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
+      
+         
+        if the_id == 2.0:
+          
+          def slope(x1, y1, x2, y2): # Line slope given two points:
+            return (y2-y1)/(x2-x1)
 
-        def angle(s1, s2): 
-          return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
+          def angle(s1, s2): 
+            return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
+          
+          lineA = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-2]][1], skeleton_list[c][list_of_index[-2]][0]))
+          lineB = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-4]][1], skeleton_list[c][list_of_index[-4]][0]))
+         
+          dif1 = abs(lineA[0][0] - lineA[1][0])
+          dif2 = abs(lineA[0][1] - lineA[1][1])
+          
+          if min(dif1, dif2) == dif1:
+              slope1 = slope(lineA[0][1], lineA[0][0], lineA[1][1], lineA[1][0])
+              slope2 = slope(lineB[0][1], lineB[0][0], lineB[1][1], lineB[1][0])
+          else:
+              slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
+              slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
+          
+          ang = angle(slope1, slope2)
+          print(type(ang))
+          if math.isnan(ang): 
+            print('Angle in degrees = ', ang)
+            print('loi', list_of_index)
+            print('skl', skeleton_list[c])
+            print(lineA)
+            print(lineB)
+            print("the end")
+            drawn_image_2 = frame.copy()
+            for coord in skeleton_list[c]:
+              print(coord)              
+              drawn_image_2[coord[0], coord[1], :] = 0
+              #drawn_image_2[coord, 1] = 0
+              #drawn_image_2[coord, 2] = 0                        
+            cv2.imshow("draw", drawn_image_2 )
+            cv2.waitKey(0)
+      
+          
+          the_x.append(idx_frame)
+          if len(the_x) > 200:
+            the_x = the_x[-200:]
+            
+          the_y.append(ang)          
+          if len(the_y) > 200:
+            the_y = the_y[-200:]
+          
+          time_x        = the_x
+          amplitude   = the_y 
+          #plt.ion()
+         
+          plt.plot(time_x, amplitude)
         
-        lineA = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-2]][1], skeleton_list[c][list_of_index[-2]][0]))
-        lineB = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-4]][1], skeleton_list[c][list_of_index[-4]][0]))
-        print("the lines")
-        print(lineA[0][0])
-        print(lineA[0][1])
-        print(lineA[1][0])
-        print(lineA[1][1])
-        slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
-        slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
-        print(slope1)
-        print(slope2)
-        ang = angle(slope1, slope2)     
-        print('Angle in degrees = ', ang)
-        the_x.append(idx_frame)
-        the_y.append(ang)
+          plt.title('Sine wave')
+          plt.xlabel('Time')
+          plt.ylabel('Amplitude = sin(time)')
+          plt.grid(True, which='both')
+          plt.axhline(y=0, color='k')
+          plt.show(block=False)
+          plt.pause(0.1)
+          plt.clf()
         
-        time_x        = the_x
-        amplitude   = the_y 
-        print("the ammmmmmp")         
-        plt.plot(time_x, amplitude)
-        print(amplitude)
-        plt.title('Sine wave')
-        plt.xlabel('Time')
-        plt.ylabel('Amplitude = sin(time)')
-        plt.grid(True, which='both')
-        plt.axhline(y=0, color='k')
-        plt.pause(0.05)
-        plt.show(block=False)
+      except:
+        print("no skeleton") 
+        
 
       #head
       cv2.circle(drawn_image, fish_head_local[c], 2, (0, 255, 0), -1)
@@ -674,29 +749,7 @@ for idx_frame in range(5700,10000000,1):   #3000 to 4000
       #center of mass
       cv2.circle(drawn_image, position_fish_local[c], 2, (0, 165, 255), -1)
       
-      
-    '''
-      def slope(x1, y1, x2, y2): # Line slope given two points:
-        return (y2-y1)/(x2-x1)
-
-      def angle(s1, s2): 
-        return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
-
-      lineA = (fish_head_local[], (1.6, 3))
-      lineB = ((1.6, 3), (2, 3.6))
-
-      slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
-      slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
-
-      ang = angle(slope1, slope2)
-      print('Angle in degrees = ', ang)
-      
-      '''
-    
-    
-    
-    
-      
+ 
 
     position_list = dframe.position_fish_local.tolist()
     fish_id = dframe.fish_id.tolist()
