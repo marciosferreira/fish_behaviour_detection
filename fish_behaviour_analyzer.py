@@ -1,4 +1,4 @@
-quadr = 'B'
+quadr = 'D'
 import scipy.stats as stats
 import scikit_posthocs as sp
 from scipy.stats import skew
@@ -8,7 +8,9 @@ import cv2
 from skimage.morphology import medial_axis
 from skimage.morphology import skeletonize
 the_x = []
-the_y = []
+the_y1 = []
+the_y2 = []
+the_y3 = []
 min_ids = 0
 from scipy.interpolate import splprep, splev
 import statistics
@@ -663,83 +665,108 @@ for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
       #tail plot
       #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
       lenght = len(skeleton_list[c])      
-      step = int(lenght*.70/4)
+      step = int(lenght*.90/5)
       
         
       list_of_index = []
       
-      try: # if 1 == 1:      
-        for x in range(-1, -step*4, -(step)):
+      if 1 == 1:      
+        for x in range(-1, -step*5, -(step)):
           list_of_index.append(x)
                   
         for x in list_of_index:  
           cv2.circle(drawn_image, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
       
          
-        if the_id == 2.0:
-          
-          def slope(x1, y1, x2, y2): # Line slope given two points:
-            return (y2-y1)/(x2-x1)
-
-          def angle(s1, s2): 
-            return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
-          
-          lineA = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-2]][1], skeleton_list[c][list_of_index[-2]][0]))
-          lineB = ((skeleton_list[c][list_of_index[-3]][1], skeleton_list[c][list_of_index[-3]][0]), (skeleton_list[c][list_of_index[-4]][1], skeleton_list[c][list_of_index[-4]][0]))
-         
-          dif1 = abs(lineA[0][0] - lineA[1][0])
-          dif2 = abs(lineA[0][1] - lineA[1][1])
-          
-          if min(dif1, dif2) == dif1:
-              slope1 = slope(lineA[0][1], lineA[0][0], lineA[1][1], lineA[1][0])
-              slope2 = slope(lineB[0][1], lineB[0][0], lineB[1][1], lineB[1][0])
-          else:
-              slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
-              slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
-          
-          ang = angle(slope1, slope2)
-          print(type(ang))
-          if math.isnan(ang): 
-            print('Angle in degrees = ', ang)
-            print('loi', list_of_index)
-            print('skl', skeleton_list[c])
-            print(lineA)
-            print(lineB)
-            print("the end")
-            drawn_image_2 = frame.copy()
-            for coord in skeleton_list[c]:
-              print(coord)              
-              drawn_image_2[coord[0], coord[1], :] = 0
-              #drawn_image_2[coord, 1] = 0
-              #drawn_image_2[coord, 2] = 0                        
-            cv2.imshow("draw", drawn_image_2 )
-            cv2.waitKey(0)
-      
+        if the_id == 1.0:
           
           the_x.append(idx_frame)
-          if len(the_x) > 200:
-            the_x = the_x[-200:]
-            
-          the_y.append(ang)          
-          if len(the_y) > 200:
-            the_y = the_y[-200:]
+          if len(the_x) > 100:
+            the_x = the_x[-100:]
           
-          time_x        = the_x
-          amplitude   = the_y 
-          #plt.ion()
+          
+          
+          ###########
+          
+          def ang(x, list_of_index, point1, point2, point3, point4):
+            
+            def slope(x1, y1, x2, y2): # Line slope given two points:
+              return (y2-y1)/(x2-x1)
+
+            def angle(s1, s2): 
+              return math.degrees(math.atan((s2-s1)/(1+(s2*s1))))
+                    
+            lineA = ((x[list_of_index[point1]][1], x[list_of_index[point1]][0]), (x[list_of_index[point2]][1], x[list_of_index[point2]][0]))
+            lineB = ((x[list_of_index[point3]][1], x[list_of_index[point3]][0]), (x[list_of_index[point4]][1], x[list_of_index[point4]][0]))
+            
+          
+            dif1 = abs(lineA[0][0] - lineA[1][0])
+            dif2 = abs(lineA[0][1] - lineA[1][1])
+            
+            
+            if min(dif1, dif2) == dif1:
+                slope1 = slope(lineA[0][1], lineA[0][0], lineA[1][1], lineA[1][0])
+                slope2 = slope(lineB[0][1], lineB[0][0], lineB[1][1], lineB[1][0])
+            else:
+                slope1 = slope(lineA[0][0], lineA[0][1], lineA[1][0], lineA[1][1])
+                slope2 = slope(lineB[0][0], lineB[0][1], lineB[1][0], lineB[1][1])
+            
+            return angle(slope1, slope2)         
+            
+          the_y1.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -3))
+          the_y2.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -2))   
+          the_y3.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -1))             
+                
+          
+          
+          #########################
+          
+          if len(the_y1) > 100:
+            the_y1 = the_y1[-100:]
+          
+          if len(the_y2) > 100:
+            the_y2 = the_y2[-100:]
+            
+          if len(the_y3) > 100:
+            the_y3 = the_y3[-100:]            
+          
+          #df_graph1=pd.DataFrame()
+          #df_graph1['frame']=the_x
+          #df_graph1['edge']=the_y3
+          
+          df_graph1=pd.DataFrame()
+          df_graph1['value']=the_y1
+          df_graph1['frame']=the_x
+          df_graph1['position']="center"
+          
+          df_graph2=pd.DataFrame()
+          df_graph2['value']=the_y2
+          df_graph2['frame']=the_x
+          df_graph2['position']="middle"
+          
+          df_graph3=pd.DataFrame()
+          df_graph3['value']=the_y3
+          df_graph3['frame']=the_x
+          df_graph3['position']="edge"
+          
+          df_concat = pd.concat([df_graph1, df_graph2, df_graph3],ignore_index=True)         
+          df_concat['abs'] = df_concat['value'].abs()         
+                    
+          if len(the_x) == 1:
+            fig, ax =plt.subplots(1,2)            
+            plt.draw()
+                  
+          sns.barplot(data = df_concat, x="position", y="abs", ax=ax[0])          
+          sns.lineplot(data = df_concat, x="frame", y="value", hue="position", ax=ax[1])
+                                 
+          plt.pause(0.1)        
+          ax[0].cla()
+          ax[1].cla()
          
-          plt.plot(time_x, amplitude)
         
-          plt.title('Sine wave')
-          plt.xlabel('Time')
-          plt.ylabel('Amplitude = sin(time)')
-          plt.grid(True, which='both')
-          plt.axhline(y=0, color='k')
-          plt.show(block=False)
-          plt.pause(0.1)
-          plt.clf()
+    
         
-      except:
+      else: #except:
         print("no skeleton") 
         
 
