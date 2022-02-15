@@ -11,6 +11,9 @@ the_x = []
 the_y1 = []
 the_y2 = []
 the_y3 = []
+the_y4 = []
+the_y5 = []
+the_y6 = []
 min_ids = 0
 from scipy.interpolate import splprep, splev
 import statistics
@@ -67,7 +70,7 @@ if (cap.isOpened()== False):
 #backSub = cv2.createBackgroundSubtractorKNN(history=500, dist2Threshold=600, detectShadows=True)
 #backSubNS = cv2.createBackgroundSubtractorKNN(history=50, dist2Threshold=50, detectShadows=True)
 
-start_frame  = 2000
+start_frame  = 6000
 
 for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
   print(idx_frame)
@@ -617,10 +620,11 @@ for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
           
           
           #stre = sns.boxplot(x="score", y="group", data=df)
+          plt.figure(0)
+          plt.clf()
           sns.violinplot(x="score", y="group", data=df)
-          plt.show() 
-                   
-          #cv2.waitKey(0)
+          plt.show(block=False)                   
+          
           
           tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
           
@@ -716,7 +720,10 @@ for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
           the_y1.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -3))
           the_y2.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -2))   
           the_y3.append(ang(skeleton_list[c],list_of_index, -5, -4, -5, -1))             
-                
+          
+          the_y4.append(ang(skeleton_list[c],list_of_index, -5, -4, -4, -3))
+          the_y5.append(ang(skeleton_list[c],list_of_index, -4, -3, -3, -2))   
+          the_y6.append(ang(skeleton_list[c],list_of_index, -3, -2, -2, -1))      
           
           
           #########################
@@ -730,38 +737,79 @@ for idx_frame in range(start_frame,10000000,1):   #3000 to 4000
           if len(the_y3) > 100:
             the_y3 = the_y3[-100:]            
           
-          #df_graph1=pd.DataFrame()
-          #df_graph1['frame']=the_x
-          #df_graph1['edge']=the_y3
+          if len(the_y4) > 100:
+            the_y4 = the_y4[-100:]
+          
+          if len(the_y5) > 100:
+            the_y5 = the_y5[-100:]
+            
+          if len(the_y6) > 100:
+            the_y6 = the_y6[-100:]                
+
           
           df_graph1=pd.DataFrame()
           df_graph1['value']=the_y1
           df_graph1['frame']=the_x
-          df_graph1['position']="center"
+          df_graph1['position']="center_1"
+          df_graph1.reset_index(inplace=True)
+          df_graph1['frame'] = df_graph1.index
           
           df_graph2=pd.DataFrame()
           df_graph2['value']=the_y2
-          df_graph2['frame']=the_x
-          df_graph2['position']="middle"
+          #df_graph2['frame']=the_x
+          df_graph2['position']="middle_1"
+          df_graph2.reset_index(inplace=True)
+          df_graph2['frame'] = df_graph2.index
+          
           
           df_graph3=pd.DataFrame()
           df_graph3['value']=the_y3
-          df_graph3['frame']=the_x
-          df_graph3['position']="edge"
+          #df_graph3['frame']=the_x
+          df_graph3['position']="edge_1"
+          df_graph3.reset_index(inplace=True)
+          df_graph3['frame'] = df_graph3.index
           
-          df_concat = pd.concat([df_graph1, df_graph2, df_graph3],ignore_index=True)         
-          df_concat['abs'] = df_concat['value'].abs()         
-                    
-          if len(the_x) == 1:
-            fig, ax =plt.subplots(1,2)            
-            plt.draw()
-                  
-          sns.barplot(data = df_concat, x="position", y="abs", ax=ax[0])          
-          sns.lineplot(data = df_concat, x="frame", y="value", hue="position", ax=ax[1])
+          df_graph4=pd.DataFrame()
+          df_graph4['value']=the_y4
+          #df_graph4['frame']=the_x
+          df_graph4['position']="center_2"
+          df_graph4.reset_index(inplace=True)
+          df_graph4['frame'] = df_graph1.index
+          
+          df_graph5=pd.DataFrame()
+          df_graph5['value']=the_y5
+          #df_graph5['frame']=the_x
+          df_graph5['position']="middle_2"
+          df_graph5.reset_index(inplace=True)
+          df_graph5['frame'] = df_graph5.index
+          
+          df_graph6=pd.DataFrame()
+          df_graph6['value']=the_y6
+          #df_graph6['frame']=the_x
+          df_graph6['position']="edge_2"
+          df_graph6.reset_index(inplace=True)
+          df_graph6['frame'] = df_graph6.index
+          
+          df_concat1 = pd.concat([df_graph1, df_graph2, df_graph3],ignore_index=True)         
+          df_concat1['abs'] = df_concat1['value'].abs()          
+          
+          df_concat2 = pd.concat([df_graph4, df_graph5, df_graph6],ignore_index=True)         
+          df_concat2['abs'] = df_concat2['value'].abs()          
+                           
+          if len(the_x) == 1:           
+            fig, ax =plt.subplots(2,2, sharex='row', sharey='col')                      
+            plt.plot(block=False)                  
+          sns.violinplot(data = df_concat1, x="position", y="abs", ax=ax[0][0])
+          sns.violinplot(data = df_concat2, x="position", y="abs", ax=ax[0][1])          
+          sns.lineplot(data = df_concat1, x="frame", y="value", hue="position", ax=ax[1][0])                   
+          sns.lineplot(data = df_concat2, x="frame", y="value", hue="position", ax=ax[1][1])
+                                 
                                  
           plt.pause(0.1)        
-          ax[0].cla()
-          ax[1].cla()
+          ax[0][0].cla()
+          ax[0][1].cla()
+          ax[1][0].cla()
+          ax[1][1].cla()
          
         
     
