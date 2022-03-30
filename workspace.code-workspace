@@ -1,0 +1,58 @@
+{
+	"folders": [
+		{
+			"name": "fish_behaviour_detection",
+			"path": "."
+		}
+	],
+	"settings": {
+		"python.terminal.activateEnvironment": true,
+		"terminal.integrated.profiles.windows": {
+			"PowerShell": {
+				"source": "PowerShell",
+				"icon": "terminal-powershell"
+			},
+			"Command Prompt": {
+				"path": [
+					"${env:windir}\\Sysnative\\cmd.exe",
+					"${env:windir}\\System32\\cmd.exe"
+				],
+				"args": [],
+				"icon": "terminal-cmd"
+			},
+			"Git Bash": {
+				"source": "Git Bash"
+			},
+			"Windows PowerShell": {
+				"path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+			}
+		},
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"python.defaultInterpreterPath": "C:\\Users\\marci\\Anaconda3\\envs\\medaka_env\\python.exe",
+		"editor.suggestSelection": "first",
+		"vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+		"workbench.editorAssociations": {
+			"*.ipynb": "jupyter-notebook"
+		},
+		"terminal.integrated.fontFamily": "monospace",
+		"editor.fontFamily": "Fira Code",
+		"editor.fontLigatures": true,
+		"gitlens.gitCommands.skipConfirmations": [
+			"fetch:command",
+			"stash-push:command",
+			"switch:command",
+			"branch-create:command"
+		],
+		"notebook.cellToolbarLocation": {
+			"default": "right",
+			"jupyter-notebook": "left"
+		},
+		"files.autoSave": "afterDelay",
+		"editor.formatOnSave": false,
+		"diffEditor.ignoreTrimWhitespace": false,
+		"code-runner.showExecutionMessage": false,
+		"code-runner.clearPreviousOutput": true,
+		"vsintellicode.features.python.deepLearning": "enabled",
+		"editor.bracketPairColorization.enabled": true
+	}
+}
