@@ -19,7 +19,6 @@ if os.path.exists(path_to_save + "/" + file_name + '.csv'):
 else:
   print("CSV file does not exist, it will be created")
 
-print("yyyyyyyyyyyyyyy")
 print(path_to_save + "/" + file_name + '.csv')
  
 with open(path_to_save + "/" + file_name + '.csv', 'a') as fd:
@@ -497,13 +496,11 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     drawn_image = blank_image.copy()
     drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
 
-    print(dframe)
     filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1.0) | (dframe['fish_id'] == 2.0)]
     filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id']]
     filt_s_dataf.insert(loc=0,
           column='frame_number',
           value=idx_frame)
-    print(filt_s_dataf)
     
     filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
   
