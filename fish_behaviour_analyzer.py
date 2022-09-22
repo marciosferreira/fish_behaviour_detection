@@ -1,8 +1,8 @@
 #Setup paramters
-quadr = 'D'      # 'A' for left up, 'B' for left down, 'C' for right up, 'D' for right down. 
+quadr = 1     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
 initial_frame = 1100  # will throw an error if not 2 fish are in each quadrant yet, or if any fish are everlapped.
 final_frame = 1000000  # set a very big number to go until the end of the video. e.g: 1000000
-path_to_video = '"C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi"'  # video path
+path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
 path_to_save = "C:/Users/marcio/Documents/results_Ian"  #where to save results
 
@@ -41,8 +41,6 @@ import pandas as pd
 #import imagehash
 #from PIL import Image     
 #import time
-quad_D = 1
-quad_D_count = 0
 #update_counter = 23
 #import matplotlib.pyplot as plt 
 #import imutils
@@ -70,7 +68,7 @@ lopp = 0
 
 previous_id_fish_local = []
 
-histograms_ids = {1:deque( maxlen=60), 2:deque( maxlen=60)}
+histograms_ids = {1:deque(maxlen=60), 2:deque(maxlen=60)}
 
 
 #cv2.imshow('background' , bw_back)
@@ -90,6 +88,41 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
   # Capture frame-by-frame
   ret, frame = cap.read()
   if ret == True:
+    
+    #########################################################################
+    #detec quadrantes on first image
+    # Load image, grayscale, median blur, sharpen image
+    if idx_frame == initial_frame:
+      #image = cv2.imread('1.pn)
+      gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)    
+      blur = cv2.medianBlur(gray, 9)
+      sharpen_kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+      sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
+
+      # Threshold and morph close
+      #thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)[1]
+      thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+            cv2.THRESH_BINARY,11,2)
+      kernel = np.ones((15,15),np.uint8)
+      opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+
+      # Find contours and filter using threshold area
+      cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+      cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+      max_area = (frame.shape[0] * frame.shape[1])/4
+      min_area = max_area * 0.5
+      quadrants_lines = []
+      for c in cnts:
+          area = cv2.contourArea(c)          
+          if area > min_area and area < max_area:
+              x,y,w,h = cv2.boundingRect(c)
+              quadrants_lines.append((x,y,w,h))
+                           
+      if len(quadrants_lines) != 4:
+        print("Number od detected quadrants is not 4")
+        quit()          
+    ###########################################################
     
     first_fish = []
     second_fish = []
@@ -119,7 +152,6 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
     lenght_of_fish_local = []
     position_fish_local = []
-    quadrant_local = []
     fish_tail_local = []
     fish_head_local = []
     idx_local = [] 
@@ -229,26 +261,17 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         fish_COM = (aver_cm[0][0], aver_cm[0][1])       
                     
 
-        fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )      
-       
-        '''final_template = frame[extTop[1]:extBot[1], extLeft[0]:extRight[0], :]        
-        final_template = cv2.cvtColor(final_template, cv2.COLOR_BGR2GRAY)
-        hist = cv2.calcHist([final_template], [0], None, [256], [0, 256])
-        hist = hist[:185]
-        hist_1 = hist[:146]       
-        hist_2 = hist[146:]      
-        final=sum(hist_1)       
-        final_grey=final[0]'''
-       
-      
-        if (aver_cm[0][0] < 427 and aver_cm[0][1] < 417):  # belongs to quadrant A1
-          quadrant_value = "A"
-        elif (aver_cm[0][0] < 427 and aver_cm[0][1] > 417):
-          quadrant_value = "B"
-        elif (aver_cm[0][0] > 427 and aver_cm[0][1] < 417):
-          quadrant_value = "C"
+        fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
+        
+     
+        if (aver_cm[0][0] < quadrants_lines[0][1] and aver_cm[0][1] < (quadrants_lines[0][0]+quadrants_lines[0][2])):  
+          quadrant_value = 0
+        elif (aver_cm[0][0] < quadrants_lines[1][1] and aver_cm[0][1] > quadrants_lines[1][0]):
+          quadrant_value = 1
+        elif (aver_cm[0][1] < (quadrants_lines[2][1] + quadrants_lines[2][3])) and aver_cm[0][0] > quadrants_lines[2][0]:
+          quadrant_value = 2
         else:
-          quadrant_value = "D"             
+          quadrant_value = 3            
       
 
         #store variables locally in the loop for immediate calculation purposes
@@ -283,10 +306,10 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     #create a XY if is the very begining of the script
     
     unique_quadrants = dframe.quadrant_local.unique()
-    if previous_df is None:
-      
+    if previous_df is None:      
       active = "XY"      
-      previous_df = dframe.copy()           
+      previous_df = dframe.copy() 
+      print(previous_df)          
       previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]
       histograms_X_Y = {"X":deque(maxlen=60), "Y":deque(maxlen=60)}
       list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
@@ -529,7 +552,11 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     cv2.line(drawn_image, (427, 0), (427,870), (255, 255, 255), thickness=1)
     cv2.line(drawn_image, (0, 417), (870,417), (255, 255, 255), thickness=1)   
 
-
+    # drawn quadrants
+    for coordinates in quadrants_lines:
+      x,y,w,h = coordinates
+      cv2.rectangle(drawn_image, (x, y), (x + w, y + h), (36,255,12), 2)
+      
     #show the image with filtered countours plotted
     imS = cv2.resize(drawn_image, (900, 900))              # Resize image   
     cv2.imshow('Frame',imS)
