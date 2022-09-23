@@ -1,6 +1,6 @@
 #Setup paramters
-quadr = 1     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
-initial_frame = 1100  # will throw an error if not 2 fish are in each quadrant yet, or if any fish are everlapped.
+quadr = (0,1,2,3)     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
+initial_frame = 1100  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
 final_frame = 1000000  # set a very big number to go until the end of the video. e.g: 1000000
 path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
@@ -46,14 +46,34 @@ import pandas as pd
 #import imutils
 fish_0_history = []
 fish_1_history = []
-make_copy_last_seen = True
+
+make_copy_last_seen = {}
+make_copy_last_seen[0] = True
+make_copy_last_seen[1] = True
+make_copy_last_seen[2] = True
+make_copy_last_seen[3] = True
+
+
+
+
 first = True
 #from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 calculo_area = []
 went_ok = 0
-active = "id"
-is_first_iteraction = False
+
+active = {}
+active[0] = "id"
+active[1] = "id"
+active[2] = "id"
+active[3] = "id"
+
+is_first_iteraction = {}
+is_first_iteraction[0] = False
+is_first_iteraction[1] = False
+is_first_iteraction[2] = False
+is_first_iteraction[3] = False
+
  
 pd.set_option('display.max_columns', None) 
 background_img = cv2.imread(background_img)
@@ -68,8 +88,8 @@ lopp = 0
 
 previous_id_fish_local = []
 
-histograms_ids = {1:deque(maxlen=60), 2:deque(maxlen=60)}
-
+histograms_ids = {'10':deque(maxlen=60), '11':deque(maxlen=60), '12':deque(maxlen=60), '13':deque(maxlen=60), '20':deque(maxlen=60), '21':deque(maxlen=60), '22':deque(maxlen=60), '23':deque(maxlen=60)}
+histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxlen=60), "X3":deque(maxlen=60), "Y0":deque(maxlen=60), "Y1":deque(maxlen=60), "Y2":deque(maxlen=60), "Y3":deque(maxlen=60)}
 
 #cv2.imshow('background' , bw_back)
 
@@ -301,217 +321,220 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe['cnt_idx'] = countours_idx
     dframe["fish_id"] = np.nan
    
+   
     #######################################################################################################
     
     #create a XY if is the very begining of the script
     
-    unique_quadrants = dframe.quadrant_local.unique()
-    if previous_df is None:      
-      active = "XY"      
+    if previous_df is None: 
+           
+      active[0] = "XY"
+      active[1] = "XY"
+      active[2] = "XY"
+      active[3] = "XY"      
+      
       previous_df = dframe.copy() 
-      print(previous_df)          
-      previous_df.loc[previous_df['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]
-      histograms_X_Y = {"X":deque(maxlen=60), "Y":deque(maxlen=60)}
-      list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
+      print(previous_df)
+      for i in quadr:          
+        previous_df.loc[previous_df['quadrant_local'] == i, 'fish_id'] = [x for x in ['X', 'Y']]
+        #histograms_X_Y = {"X" + i:deque(maxlen=60), "Y" + i:deque(maxlen=60)}
+        #list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()
+      
+          
       
     ########################################################################################################
     
     #block 2
     # check if there is only one fish (overlap event), and if yes, recreate the XY and change to it
-    
+    unique_quadrants = dframe.quadrant_local.unique()
     for index_q, row_q in enumerate(unique_quadrants):      
-      fish_per_quadrant = (dframe['quadrant_local']==quadr).sum()
-      
-    
-      if row_q == quadr:   
-
-        if fish_per_quadrant < 2:      
-                    
-          active = "XY"
-          is_first_iteraction = True         
-          if make_copy_last_seen == True:
-            dframe_last_seen = previous_df.copy()
-            make_copy_last_seen = False         
-          histograms_X_Y = {"X":deque(maxlen=60), "Y":deque(maxlen=60)}
-                
-          continue
+      fish_per_quadrant = (dframe['quadrant_local']==row_q).sum() 
+      if fish_per_quadrant < 2:                   
+        active[row_q] = "XY"
+        is_first_iteraction[row_q] = True
+        
+        histograms_X_Y["X" + str(row_q)] = deque(maxlen=60)
+        histograms_X_Y["Y" + str(row_q)] = deque(maxlen=60)             
+            
+        continue
         
         
         #########################################################################
         # block 1
-        # the initial xy finish and the fish don´t have id as history, then just attribute the xy history for the id history
-   
+        # # first interaction (frame) only after a collision event, so we have to reset XY    
              
-        if active == "XY" and is_first_iteraction == True:   
-                         
-          dframe.loc[dframe['quadrant_local'] == quadr, 'fish_id'] = [x for x in ['X', 'Y']]          
-          list_idx = dframe.loc[dframe['quadrant_local'] == quadr].index.tolist()          
-          histograms_X_Y['X'].append(histograms[list_idx[0]])
-          histograms_X_Y['Y'].append(histograms[list_idx[1]])
-          previous_df = dframe.copy()
-          is_first_iteraction = False      
-               
-       
-        filtered_df = dframe[(dframe.quadrant_local == row_q)]
-        filtered_df.index = filtered_df.index.set_names(['original_index'])
-        filtered_df = filtered_df.reset_index()      
-  
+      if active[row_q] == "XY" and is_first_iteraction[row_q] == True:                       
+        dframe.loc[dframe['quadrant_local'] == row_q, 'fish_id'] = [x for x in ['X', 'Y']]          
+        list_idx = dframe.loc[dframe['quadrant_local'] == row_q].index.tolist()          
+        histograms_X_Y['X'+ str(row_q)].append(histograms[list_idx[0]])  
+        histograms_X_Y['Y'+ str(row_q)].append(histograms[list_idx[1]])
+        previous_df = dframe.copy() # !!!!!!!!!!!!!!!!!!!!!!!!
+        is_first_iteraction[row_q] = False      
+              
+        
+      filtered_df = dframe[(dframe.quadrant_local == row_q)]
+      filtered_df.index = filtered_df.index.set_names(['original_index'])
+      filtered_df = filtered_df.reset_index()      
+
         
         ########################################################################
         #### block 2
         # here, while the script is in 1-2 mode or xy mode, the script decide which fish is which based on last position           
              
-        
-        previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
-        previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
-    
-        previous_fish_1_id = previous_fish_1['fish_id']
-        previous_fish_2_id = previous_fish_2['fish_id']
-                
-        previous_fish_1_position = previous_fish_1['position_fish_local']
-        previous_fish_2_position = previous_fish_2['position_fish_local']
+      previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
+      previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
 
-        previous_fish_1_area = previous_fish_1['fish_area']
-        previous_fish_2_area = previous_fish_2['fish_area']        
-        
-        for idx, row in filtered_df.iterrows():
-          
-          cnt = contours[row['cnt_idx']]         
-          
-          distances_indices = [] 
-          current_position_fish_local = row['position_fish_local'] 
-          
-          distance_value_1 = math.sqrt(   (previous_fish_1_position[0]-current_position_fish_local[0])**2 + (previous_fish_1_position[1]-current_position_fish_local[1])**2    )
-          distances_indices.append(distance_value_1)
-          distance_value_2 = math.sqrt(   (previous_fish_2_position[0]-current_position_fish_local[0])**2 + (previous_fish_2_position[1]-current_position_fish_local[1])**2    )
-                  
-          distances_indices.append(distance_value_2)
-          distances_indices.append(distance_value_1)              
-                  
-          lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]              
-          
-          if lower_indice[0] == 0:            
-            dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
-          else:            
-            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id        
+      previous_fish_1_id = previous_fish_1['fish_id']
+      previous_fish_2_id = previous_fish_2['fish_id']
+              
+      previous_fish_1_position = previous_fish_1['position_fish_local']
+      previous_fish_2_position = previous_fish_2['position_fish_local']
+
+      previous_fish_1_area = previous_fish_1['fish_area']
+      previous_fish_2_area = previous_fish_2['fish_area']        
       
-           #####################################################################################################################
-            ####  block 3
-            # here, the script add values to the history list with some filtering. Can be XY or Id.        
-          
-         
-        for idx, row in filtered_df.iterrows():         
-          
-          if active == "XY":
-                                            
-            histograms_X_Y[dframe['fish_id'][row['original_index']]].append(histograms[int(row['original_index'])])               
-          
-        #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
+      for idx, row in filtered_df.iterrows():
         
-        if active == 'XY' and len(histograms_X_Y['Y']) == 60 and len(histograms_X_Y['X']) == 60:
-          t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X'], histograms_X_Y['Y'], equal_var=False)
-          cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
-          cov1 = cov(histograms_X_Y['Y'])
-          cov2 = cov(histograms_X_Y['X'])
-         
-             
-          if p_val_filter < 0.01 and abs(t_stat_filter) > 10 and kurtosis(histograms_X_Y['Y']) < 1 and kurtosis(histograms_X_Y['Y']) > 0 and kurtosis(histograms_X_Y['X']) < 1 and kurtosis(histograms_X_Y['X']) > 0:  
-            active = 'id'
-          else:
-            #histograms_X_Y['Y'] = histograms_X_Y['Y']
-            #histograms_X_Y['X'] = histograms_X_Y['X']
-            break
+        cnt = contours[row['cnt_idx']]         
+        
+        distances_indices = [] 
+        current_position_fish_local = row['position_fish_local'] 
+        
+        distance_value_1 = math.sqrt(   (previous_fish_1_position[0]-current_position_fish_local[0])**2 + (previous_fish_1_position[1]-current_position_fish_local[1])**2    )
+        distances_indices.append(distance_value_1)
+        distance_value_2 = math.sqrt(   (previous_fish_2_position[0]-current_position_fish_local[0])**2 + (previous_fish_2_position[1]-current_position_fish_local[1])**2    )
                 
+        distances_indices.append(distance_value_2)
+        distances_indices.append(distance_value_1)              
+                
+        lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]              
+        
+        if lower_indice[0] == 0:            
+          dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
+        else:            
+          dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id        
+    
+          #####################################################################################################################
+          ####  block 3
+          # here, the script add values to the history list with some filtering. Can be XY or Id.         
+        
+      for idx, row in filtered_df.iterrows():         
+        
+        if active[row_q] == "XY":
           
-        ############################################################################################################
-        # the minimum values were reached in lists (id and XY), then we go ahead to choose which fish is which,
-        #but if we have no id values yet, as is the very begining, we need to copy them from xy.      
-          if len(histograms_ids[1]) < 60 or len(histograms_ids[2]) < 60:           
-            histograms_ids[1] = histograms_X_Y[previous_fish_1_id]                    
-            dframe.loc[dframe.fish_id == previous_fish_1_id, "fish_id"] = float(1) 
-            histograms_ids[2] = histograms_X_Y[previous_fish_2_id]          
-            dframe.loc[dframe.fish_id == previous_fish_2_id, "fish_id"] = float(2)              
-              
-        #############################################################################################################      
-          # now we actually are going to decide which fish is which by statistcs          
-          cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
-          t_stat_filter, p_val_filter = stats.ttest_ind(histograms_ids[1], histograms_ids[2], equal_var=False)          
-          cov1 = cov(histograms_ids[1])
-          cov2 = cov(histograms_ids[2])    
+          #print(histograms[int(row['original_index'])])
+          print(dframe['fish_id'][row['original_index']] )
+                                          
+          histograms_X_Y[str(dframe['fish_id'][row['original_index']]) + str(row_q)].append(histograms[int(row['original_index'])])     ######EEEEEEEEEEROOOOOO          
+        
+      #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
+      
+      if active[row_q] == 'XY' and len(histograms_X_Y['Y' + str(row_q)]) == 60 and len(histograms_X_Y['X' + str(row_q)]) == 60:
+      
+        t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X' + str(row_q)], histograms_X_Y['Y' + str(row_q)], equal_var=False)
+        cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
+        cov1 = cov(histograms_X_Y['Y' + str(row_q)])
+        cov2 = cov(histograms_X_Y['X' + str(+row_q)])
+        
             
-          current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
-          current_fish_0 = current_fish.iloc[0]
-          current_fish_1 = current_fish.iloc[1]      
-
-          templates_of_ID1 = histograms_ids[1]
-          templates_of_ID2 = histograms_ids[2]    
+        if p_val_filter < 0.01 and abs(t_stat_filter) > 10 and kurtosis(histograms_X_Y['Y' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['Y' + str(row_q)]) > 0 and kurtosis(histograms_X_Y['X' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['X' + str(row_q)]) > 0:  
+          active[row_q] = 'id'
+          
+        else:
+          #histograms_X_Y['Y'] = histograms_X_Y['Y']
+          #histograms_X_Y['X'] = histograms_X_Y['X']
+          continue
               
-          X_current_template_list = histograms_X_Y['X']
-          Y_current_template_list = histograms_X_Y['Y']
+        
+      ############################################################################################################
+      # the minimum statistics and count (60) were reached in lists (XY), then we go ahead to choose which fish is which,
+      #but if we have no id values yet, as is the very begining, we need to copy them from xy.      
+        if len(histograms_ids['1' + str(row_q)]) < 60 or len(histograms_ids['2' + str(row_q)]) < 60:           
+          histograms_ids['1' + str(row_q)] = histograms_X_Y[previous_fish_1_id + str(row_q)]                    
+          dframe.loc[(dframe.fish_id == previous_fish_1_id) & (dframe.quadrant_local == row_q), "fish_id"] = float(1) 
+          histograms_ids['2' + str(row_q)] = histograms_X_Y[str(previous_fish_2_id) + str(row_q)]          
+          dframe.loc[(dframe.fish_id == previous_fish_2_id) & (dframe.quadrant_local == row_q), "fish_id"] = float(2)              
+        print("time to decide")    
+      #############################################################################################################      
+        # now we actually are going to decide which fish is which by statistcs          
+        cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
+        t_stat_filter, p_val_filter = stats.ttest_ind(histograms_ids['1' + str(row_q)], histograms_ids['2' + str(row_q)], equal_var=False)          
+        cov1 = cov(histograms_ids['1' + str(row_q)])
+        cov2 = cov(histograms_ids['2' + str(row_q)])    
           
-          def reject_outliers(data, m=6.):
-              d = np.abs(data - np.median(data))
-              mdev = np.median(d)
-              s = d / (mdev if mdev else 1.)
-              return data[s < m].tolist()          
-          
-          #templates_of_ID1, templates_of_ID2, X_current_template_list, Y_current_template_list = reject_outliers(np.array(templates_of_ID1)), reject_outliers(np.array(templates_of_ID2)), reject_outliers(np.array(X_current_template_list)), reject_outliers(np.array(Y_current_template_list))     
+        current_fish = dframe.loc[dframe['quadrant_local'] == row_q]
+        current_fish_0 = current_fish.iloc[0]
+        current_fish_1 = current_fish.iloc[1]      
 
-          df1 = pd.DataFrame({'score': templates_of_ID1,
-                    'group': 'id1'}) 
-         
-          #print(df1.size)
-          #k2, p = stats.normaltest(templates_of_ID1)
-          #print(p)
-          #print(iqr(templates_of_ID1))
-          df2 = pd.DataFrame({'score': templates_of_ID2,
-                    'group': 'id2'}) 
-          #print(df2.size)
-          #k2, p = stats.normaltest(templates_of_ID2)
-          #print(p)
-          #print(iqr(templates_of_ID2))
-          df3 = pd.DataFrame({'score': X_current_template_list,
-                    'group': 'X'}) 
-          #print(df3.size)
-          #k2, p = stats.normaltest(X_current_template_list)
-          #print(p)
+        templates_of_ID1 = histograms_ids['1' + str(row_q)]
+        templates_of_ID2 = histograms_ids['2' + str(row_q)]    
+            
+        X_current_template_list = histograms_X_Y['X' + str(row_q)]
+        Y_current_template_list = histograms_X_Y['Y' + str(row_q)]
         
-          #sns.distplot(X_current_template_list)
+        def reject_outliers(data, m=6.):
+            d = np.abs(data - np.median(data))
+            mdev = np.median(d)
+            s = d / (mdev if mdev else 1.)
+            return data[s < m].tolist()          
+        
+        #templates_of_ID1, templates_of_ID2, X_current_template_list, Y_current_template_list = reject_outliers(np.array(templates_of_ID1)), reject_outliers(np.array(templates_of_ID2)), reject_outliers(np.array(X_current_template_list)), reject_outliers(np.array(Y_current_template_list))     
 
-          df4 = pd.DataFrame({'score': Y_current_template_list,
-                    'group': 'Y'}) 
-          #print(df4.size)
-          #k2, p = stats.normaltest(Y_current_template_list)
-          #print(p)
-       
-          #sns.distplot(Y_current_template_list)
-          df = pd.concat([df1, df2, df3, df4])
-          
-          
-          
-          #stre = sns.boxplot(x="score", y="group", data=df)
-          #sns.violinplot(x="score", y="group", data=df)
-          #plt.show(block = False) 
-                   
-          #cv2.waitKey(0)
-          
-          tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
-          
-          
-          X1 = tukey['X'][0]
-          X2 = tukey['X'][1]
-          Y1 = tukey['Y'][0]
-          Y2 = tukey['Y'][1]         
+        df1 = pd.DataFrame({'score': templates_of_ID1,
+                  'group': 'id1'}) 
+        
+        #print(df1.size)
+        #k2, p = stats.normaltest(templates_of_ID1)
+        #print(p)
+        #print(iqr(templates_of_ID1))
+        df2 = pd.DataFrame({'score': templates_of_ID2,
+                  'group': 'id2'}) 
+        #print(df2.size)
+        #k2, p = stats.normaltest(templates_of_ID2)
+        #print(p)
+        #print(iqr(templates_of_ID2))
+        df3 = pd.DataFrame({'score': X_current_template_list,
+                  'group': 'X'}) 
+        #print(df3.size)
+        #k2, p = stats.normaltest(X_current_template_list)
+        #print(p)
+      
+        #sns.distplot(X_current_template_list)
+
+        df4 = pd.DataFrame({'score': Y_current_template_list,
+                  'group': 'Y'}) 
+        #print(df4.size)
+        #k2, p = stats.normaltest(Y_current_template_list)
+        #print(p)
+      
+        #sns.distplot(Y_current_template_list)
+        df = pd.concat([df1, df2, df3, df4])
         
         
-          minimum =  min(X1, X2, Y1, Y2)       
-                
-          if minimum == X2 or minimum == Y1:
-            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(1) 
-            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(2) 
-          else:
-            dframe.loc[dframe.fish_id == 'X', "fish_id"] = float(2) 
-            dframe.loc[dframe.fish_id == 'Y', "fish_id"] = float(1)          
+        
+        #stre = sns.boxplot(x="score", y="group", data=df)
+        #sns.violinplot(x="score", y="group", data=df)
+        #plt.show(block = False) 
+                  
+        #cv2.waitKey(0)
+        
+        tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
+        
+        
+        X1 = tukey['X'][0]
+        X2 = tukey['X'][1]
+        Y1 = tukey['Y'][0]
+        Y2 = tukey['Y'][1]         
+      
+      
+        minimum =  min(X1, X2, Y1, Y2)       
+              
+        if minimum == X2 or minimum == Y1:
+          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = float(1) 
+          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = float(2) 
+        else:
+          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = float(2) 
+          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = float(1)          
 
       #####################################################################################   
     #block 6
