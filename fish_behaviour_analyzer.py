@@ -1,12 +1,13 @@
 #Setup paramters
 quadr = (0,1,2,3)     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
 initial_frame = 1746  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
-final_frame = 1000000  # set a very big number to go until the end of the video. e.g: 1000000
+final_frame = 3400  # set a very big number to go until the end of the video. e.g: 1000000
 path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
-background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
+#background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
 path_to_save = "C:/Users/marcio/Documents/results_Ian"  #where to save results
 
 #####################################################################################
+
 import os
 import pathlib
 
@@ -31,6 +32,8 @@ import scipy.stats as stats
 import scikit_posthocs as sp
 #from scipy.stats import skewgit branch
 from scipy.stats import kurtosis
+import scipy.stats
+
 #from scipy.stats import iqr
 #import statistics
 #import seaborn as sns
@@ -44,6 +47,33 @@ import pandas as pd
 #update_counter = 23
 #import matplotlib.pyplot as plt 
 #import imutils
+
+
+
+# Check if camera opened successfully
+cap = cv2.VideoCapture(path_to_video)
+
+if final_frame == None:
+  final_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+  
+#generate the background dynamically:
+background_frame = []
+step = (int((final_frame-initial_frame)/10))
+for idx_frame in range(initial_frame,final_frame,step):
+  cap.set(1, idx_frame)  
+  # Capture frame-by-frame
+  ret, frame = cap.read()
+  if ret == True:   
+    background_frame.append(frame)
+    
+result = scipy.stats.mode(np.stack(background_frame), axis=0)
+dynamic_background = result.mode[0]
+
+cv2.imshow('dyn',dynamic_background)
+
+
+
+
 fish_0_history = []
 fish_1_history = []
 
@@ -75,9 +105,9 @@ is_first_iteraction[2] = False
 is_first_iteraction[3] = False
 
  
-pd.set_option('display.max_columns', None) 
-background_img = cv2.imread(background_img)
-bw_back = cv2.cvtColor(background_img, cv2.COLOR_BGR2GRAY)
+#pd.set_option('display.max_columns', None) 
+#background_img = cv2.imread(dynamic_background)
+bw_back = cv2.cvtColor(dynamic_background, cv2.COLOR_BGR2GRAY)
 bw_back = cv2.GaussianBlur(bw_back, (9,9) ,0) 
 
 #create a blank image to plot everything on
@@ -93,11 +123,15 @@ histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxle
 
 #cv2.imshow('background' , bw_back)
 
-# Check if camera opened successfully
-cap = cv2.VideoCapture(path_to_video)
+
+
+
 if (cap.isOpened()== False): 
   print("Error opening video stream or file")
 
+
+
+   
 # Read until video is completed
 for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
   print(idx_frame)
