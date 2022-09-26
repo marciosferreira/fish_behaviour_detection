@@ -1,6 +1,6 @@
 #Setup paramters
 quadr = (0,1,2,3)     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
-initial_frame = 1100  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
+initial_frame = 1400  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
 final_frame = 1000000  # set a very big number to go until the end of the video. e.g: 1000000
 path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
@@ -146,9 +146,15 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
     first_fish = []
     second_fish = []
+    
+    
+    #x_y_line = (((quadrants_lines[1][0]+quadrants_lines[1][2]) - (quadrants_lines[0][0]))/2, ((quadrants_lines[3][1]) + (quadrants_lines[3][3])))
+    #cv2.rectangle(frame, (int(x_y_line[0]), int(x_y_line[1])), (int(x_y_line[0])+100, int(x_y_line[1])+100), (36,255,12), 2)
 
-    imzz = cv2.resize(frame, (780, 780))              # Resize image   
-    cv2.imshow('Main',imzz)
+
+    #imzz = cv2.resize(frame, (780, 780))              # Resize image   
+
+    #cv2.imshow('Main',imzz)
     #cv2.waitKey(1)
      
     #########################################################################
@@ -278,20 +284,24 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         aver_cm = np.mean(arr, axis=0).astype(int)
         
         #fish_center of mass
-        fish_COM = (aver_cm[0][0], aver_cm[0][1])       
-                    
-
+        fish_COM = (aver_cm[0][0], aver_cm[0][1])  # x and y axis
+        
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
         
-     
-        if (aver_cm[0][0] < quadrants_lines[0][1] and aver_cm[0][1] < (quadrants_lines[0][0]+quadrants_lines[0][2])):  
+        cv2.rectangle(frame, (fish_COM[0], fish_COM[1]), (fish_COM[0] + 10, fish_COM[1] + 10), (36,255,12), 2)
+        cv2.imshow('Main',frame)
+        
+        if (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2]) and fish_COM[1] < ((quadrants_lines[3][1] + quadrants_lines[3][3]))):  
           quadrant_value = 0
-        elif (aver_cm[0][0] < quadrants_lines[1][1] and aver_cm[0][1] > quadrants_lines[1][0]):
+        elif (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2]) and fish_COM[1] < ((quadrants_lines[0][1] + quadrants_lines[0][3]))):
           quadrant_value = 1
-        elif (aver_cm[0][1] < (quadrants_lines[2][1] + quadrants_lines[2][3])) and aver_cm[0][0] > quadrants_lines[2][0]:
+        elif (fish_COM[0] > (quadrants_lines[2][0]) and fish_COM[1] < ((quadrants_lines[2][1] + quadrants_lines[2][3]))):
           quadrant_value = 2
+        elif (fish_COM[0] > (quadrants_lines[1][0]) and fish_COM[1] > (quadrants_lines[1][1])):
+          quadrant_value = 3
         else:
-          quadrant_value = 3            
+          print("erro!!!!!!!!!!!")
+          quit()           
       
 
         #store variables locally in the loop for immediate calculation purposes
@@ -351,10 +361,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       fish_per_quadrant = (dframe['quadrant_local']==row_q).sum() 
       if fish_per_quadrant < 2:                   
         active[row_q] = "XY"
-        is_first_iteraction[row_q] = True
-        
+        is_first_iteraction[row_q] = True        
         histograms_X_Y["X" + str(row_q)] = deque(maxlen=60)
-        histograms_X_Y["Y" + str(row_q)] = deque(maxlen=60)             
+        histograms_X_Y["Y" + str(row_q)] = deque(maxlen=60)
             
         continue
         
@@ -364,69 +373,69 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         # # first interaction (frame) only after a collision event, so we have to reset XY    
              
       if active[row_q] == "XY" and is_first_iteraction[row_q] == True:                       
-        dframe.loc[dframe['quadrant_local'] == row_q, 'fish_id'] = [x for x in ['X', 'Y']]          
-        list_idx = dframe.loc[dframe['quadrant_local'] == row_q].index.tolist()          
+        dframe.loc[dframe['quadrant_local'] == row_q, 'fish_id'] = [x for x in ['X', 'Y']]
+        list_idx = dframe.loc[dframe['quadrant_local'] == row_q].index.tolist()                   
         histograms_X_Y['X'+ str(row_q)].append(histograms[list_idx[0]])  
-        histograms_X_Y['Y'+ str(row_q)].append(histograms[list_idx[1]])
-        previous_df = dframe.copy() # !!!!!!!!!!!!!!!!!!!!!!!!
+        histograms_X_Y['Y'+ str(row_q)].append(histograms[list_idx[1]])             
         is_first_iteraction[row_q] = False      
               
-        
-      filtered_df = dframe[(dframe.quadrant_local == row_q)]
-      filtered_df.index = filtered_df.index.set_names(['original_index'])
-      filtered_df = filtered_df.reset_index()      
+      else:  
+        filtered_df = dframe[(dframe.quadrant_local == row_q)]
+        filtered_df.index = filtered_df.index.set_names(['original_index'])
+        filtered_df = filtered_df.reset_index()      
 
         
         ########################################################################
         #### block 2
-        # here, while the script is in 1-2 mode or xy mode, the script decide which fish is which based on last position           
-             
-      previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
-      previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
-
-      previous_fish_1_id = previous_fish_1['fish_id']
-      previous_fish_2_id = previous_fish_2['fish_id']
+        # here, while the script is in 1-2 mode or xy mode, the script decide which fish is which based on last position
+        #hpwever, if only 1 value in histograms_X_Y, means that we don´t have previous df, as it is the begining of xy, but xy was already added           
               
-      previous_fish_1_position = previous_fish_1['position_fish_local']
-      previous_fish_2_position = previous_fish_2['position_fish_local']
+        
+        previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
+        previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]  
 
-      previous_fish_1_area = previous_fish_1['fish_area']
-      previous_fish_2_area = previous_fish_2['fish_area']        
+        previous_fish_1_id = previous_fish_1['fish_id']
+        previous_fish_2_id = previous_fish_2['fish_id']
+                
+        previous_fish_1_position = previous_fish_1['position_fish_local']
+        previous_fish_2_position = previous_fish_2['position_fish_local']
+
+        previous_fish_1_area = previous_fish_1['fish_area']
+        previous_fish_2_area = previous_fish_2['fish_area']        
       
-      for idx, row in filtered_df.iterrows():
-        
-        cnt = contours[row['cnt_idx']]         
-        
-        distances_indices = [] 
-        current_position_fish_local = row['position_fish_local'] 
-        
-        distance_value_1 = math.sqrt(   (previous_fish_1_position[0]-current_position_fish_local[0])**2 + (previous_fish_1_position[1]-current_position_fish_local[1])**2    )
-        distances_indices.append(distance_value_1)
-        distance_value_2 = math.sqrt(   (previous_fish_2_position[0]-current_position_fish_local[0])**2 + (previous_fish_2_position[1]-current_position_fish_local[1])**2    )
-                
-        distances_indices.append(distance_value_2)
-        distances_indices.append(distance_value_1)              
-                
-        lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]              
-        
-        if lower_indice[0] == 0:            
-          dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
-        else:            
-          dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id        
-    
-          #####################################################################################################################
-          ####  block 3
-          # here, the script add values to the history list with some filtering. Can be XY or Id.         
-        
-      for idx, row in filtered_df.iterrows():         
-        
-        if active[row_q] == "XY":
+        for idx, row in filtered_df.iterrows():
           
-          #print(histograms[int(row['original_index'])])
-          print(dframe['fish_id'][row['original_index']] )
-                                          
-          histograms_X_Y[str(dframe['fish_id'][row['original_index']]) + str(row_q)].append(histograms[int(row['original_index'])])     ######EEEEEEEEEEROOOOOO          
-        
+          cnt = contours[row['cnt_idx']]         
+          
+          distances_indices = [] 
+          current_position_fish_local = row['position_fish_local'] 
+          
+          distance_value_1 = math.sqrt(   (previous_fish_1_position[0]-current_position_fish_local[0])**2 + (previous_fish_1_position[1]-current_position_fish_local[1])**2    )
+          distances_indices.append(distance_value_1)
+          distance_value_2 = math.sqrt(   (previous_fish_2_position[0]-current_position_fish_local[0])**2 + (previous_fish_2_position[1]-current_position_fish_local[1])**2    )
+                  
+          distances_indices.append(distance_value_2)
+          distances_indices.append(distance_value_1)              
+                  
+          lower_indice = sorted(range(len(distances_indices)), key = lambda sub: distances_indices[sub])[:1]              
+          
+          if lower_indice[0] == 0:            
+            dframe.loc[row['original_index'],'fish_id'] = previous_fish_1_id
+          else:            
+            dframe.loc[row['original_index'],'fish_id'] = previous_fish_2_id        
+      
+            #####################################################################################################################
+            ####  block 3
+            # here, the script add values to the history list with some filtering. Can be XY or Id.         
+          
+              
+          if active[row_q] == "XY":        
+            #histograms_X_Y[row['fish_id'] + str(row_q)].append(histograms[int(row['original_index'])])
+            histograms_X_Y[str(dframe['fish_id'][row['original_index']]) + str(row_q)].append(histograms[int(row['original_index'])])     ######EEEEEEEEEEROOOOOO          
+
+            
+            
+    
       #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
       
       if active[row_q] == 'XY' and len(histograms_X_Y['Y' + str(row_q)]) == 60 and len(histograms_X_Y['X' + str(row_q)]) == 60:
@@ -548,7 +557,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           column='frame_number',
           value=idx_frame)
     
-    #filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
+    filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
     # not append because it is in development now
   
         
@@ -576,9 +585,11 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     cv2.line(drawn_image, (0, 417), (870,417), (255, 255, 255), thickness=1)   
 
     # drawn quadrants
-    for coordinates in quadrants_lines:
-      x,y,w,h = coordinates
-      cv2.rectangle(drawn_image, (x, y), (x + w, y + h), (36,255,12), 2)
+    #for coordinates in quadrants_lines:
+      #x,y,w,h = coordinates
+      #cv2.rectangle(drawn_image, (x, y), (x + w, y + h), (36,255,12), 2)
+    
+    #cv2.rectangle(main, (int(x_y_line[0]), int(x_y_line[1])), (int(x_y_line[0])+100, int(x_y_line[1])+100), (36,255,12), 2)
       
     #show the image with filtered countours plotted
     imS = cv2.resize(drawn_image, (900, 900))              # Resize image   
