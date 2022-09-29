@@ -23,7 +23,7 @@ else:
 print(path_to_save + "/" + file_name + '.csv')
  
 with open(path_to_save + "/" + file_name + '.csv', 'w') as fd:
-  fd.write('frame_number, length_of_fish, center_of_mass, fish_tail, fish_head, quadrant, fish_area, fish_id\n')
+  fd.write('frame_number, length_of_fish, center_of_mass, fish_tail, fish_head, quadrant, fish_area, fish_id, tail_points\n')
 
 from collections import deque
 import cv2
@@ -47,6 +47,8 @@ import pandas as pd
 #update_counter = 23
 #import matplotlib.pyplot as plt 
 #import imutils
+from skimage.morphology import skeletonize
+
 
 
 
@@ -58,7 +60,7 @@ if final_frame == None:
   
 #generate the background dynamically:
 background_frame = []
-step = (int((final_frame-initial_frame)/10))
+step = (int((final_frame-initial_frame)/20))
 for idx_frame in range(initial_frame,final_frame,step):
   cap.set(1, idx_frame)  
   # Capture frame-by-frame
@@ -66,8 +68,10 @@ for idx_frame in range(initial_frame,final_frame,step):
   if ret == True:   
     background_frame.append(frame)
     
-result = scipy.stats.mode(np.stack(background_frame), axis=0)
-dynamic_background = result.mode[0]
+#result = scipy.stats.mode(np.stack(background_frame), axis=0)
+result = np.median(background_frame,axis=0)
+dynamic_background = result.astype(np.uint8)
+#dynamic_background = result.mode[0]
 
 cv2.imshow('dyn',dynamic_background)
 
@@ -224,6 +228,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     template_area = []
     template_blur = []
     template_dark = []
+    skeleton_list = []
+
     counter = 0
     
     for idx, cnt in enumerate(contours):
@@ -232,7 +238,16 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       
       #calculate aspect ratio for template quality filtering   
 
-      if area > 200 and area < 1500:        
+      if area > 200 and area < 1500:
+        
+        #will be used for squeleton
+        drawn_image_for_skeleton = blank_image.copy()
+        drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)        
+        bw_mainImage_sk = cv2.cvtColor(drawn_image_for_skeleton, cv2.COLOR_BGR2GRAY)
+        binarizedImage = bw_mainImage_sk / 255
+        skeleton = skeletonize(binarizedImage)
+        skeleton = (skeleton*255).astype(np.uint8)      
+        skeleton_coords = list(zip(*np.nonzero(skeleton)))
               
         #will be used to predict the size of the fish excluding the tail part
         fish_total_pixels = len(cnt)
@@ -287,6 +302,34 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
         #the head coordinates
         aver_head = (aver_head[0][0], aver_head[0][1])
+        
+        #squeleton continuity
+      
+        
+       
+        sorted_skeleton = []               
+        while len(skeleton_coords) > 1:
+          distances_skeleton_from_head = []
+          for l in skeleton_coords:           
+            distance = math.sqrt(   (aver_head[0]-l[1])**2 + (aver_head[1]-l[0])**2    )
+            distances_skeleton_from_head.append(distance)
+          min_value = min(distances_skeleton_from_head)
+          min_index_skeleton = distances_skeleton_from_head.index(min_value)
+          min_skl_coord = skeleton_coords.pop(min_index_skeleton)          
+          sorted_skeleton.append(min_skl_coord)
+         
+        lenght = len(sorted_skeleton)      
+        step = int(lenght*.70/4)        
+        tail_points_filtered = []
+        for x in range(-1, -step*4, -(step)):
+          tail_points_filtered.append(sorted_skeleton[x])        
+        
+        
+        
+        
+        
+        
+        
 
 
         #calculate the center of mass of the fish excluding the tail
@@ -326,7 +369,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         for coordinates in quadrants_lines:
           x,y,w,h = coordinates
           cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
-          cv2.imshow('Main',frame)
+          #cv2.imshow('Main',frame)
         
         if (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2] +10) and fish_COM[1] < ((quadrants_lines[3][1] + quadrants_lines[3][3] +10))):  
           quadrant_value = 0
@@ -353,7 +396,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         countours_idx.append(0)
         template_area.append(area_rec)
         template_blur.append(0)
-        template_dark.append(0)        
+        template_dark.append(0)
+        skeleton_list.append(tail_points_filtered)       
                       
         counter +=1
     
@@ -366,7 +410,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe['quadrant_local'] = quadrant_local
     dframe['fish_area'] = fish_area
     dframe['cnt_idx'] = countours_idx
-    dframe["fish_id"] = np.nan
+    dframe["fish_id"] = None
+    dframe["tail_points"] = skeleton_list
+
    
    
     #######################################################################################################
@@ -503,9 +549,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           previous_fish_2_id = previous_fish_2['fish_id']
                    
           histograms_ids['1' + str(row_q)] = histograms_X_Y[previous_fish_1_id + str(row_q)]                    
-          dframe.loc[(dframe.fish_id == previous_fish_1_id) & (dframe.quadrant_local == row_q), "fish_id"] = float(1) 
+          dframe.loc[(dframe.fish_id == previous_fish_1_id) & (dframe.quadrant_local == row_q), "fish_id"] = 1
           histograms_ids['2' + str(row_q)] = histograms_X_Y[str(previous_fish_2_id) + str(row_q)]          
-          dframe.loc[(dframe.fish_id == previous_fish_2_id) & (dframe.quadrant_local == row_q), "fish_id"] = float(2)              
+          dframe.loc[(dframe.fish_id == previous_fish_2_id) & (dframe.quadrant_local == row_q), "fish_id"] = 2          
         print("time to decide")    
       #############################################################################################################      
         # now we actually are going to decide which fish is which by statistcs          
@@ -582,39 +628,40 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         minimum =  min(X1, X2, Y1, Y2)       
               
         if minimum == X2 or minimum == Y1:
-          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = float(1) 
-          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = float(2) 
+          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = 1
+          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = 2
         else:
-          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = float(2) 
-          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = float(1)
+          dframe.loc[(dframe.fish_id == 'X') & (dframe.quadrant_local == row_q), "fish_id"] = 2
+          dframe.loc[(dframe.fish_id == 'Y') & (dframe.quadrant_local == row_q), "fish_id"] = 1
         
         pass            
 
       #####################################################################################   
     #block 6
     # Time to draw everything on a template
-    drawn_image = blank_image.copy()
-    drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
-
-    filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1.0) | (dframe['fish_id'] == 2.0)]
-    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id']]
-    filt_s_dataf.insert(loc=0,
-          column='frame_number',
-          value=idx_frame)
+    #drawn_image = blank_image.copy()
     
-    filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
-    # not append because it is in development now
-  
+    
+    
+
+    
+    
+    
+    
+    
+    #drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
+
+    
         
     for c in idx_local[:8]:
       #tail plot
-      cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
+      #cv2.circle(frame, fish_tail_local[c], 2, (0, 0, 255), -1)
 
       #head
-      cv2.circle(drawn_image, fish_head_local[c], 2, (0, 255, 0), -1)
+      cv2.circle(frame, fish_head_local[c], 2, (0, 255, 0), -1)
 
       #center of mass
-      cv2.circle(drawn_image, position_fish_local[c], 2, (0, 165, 255), -1)
+      cv2.circle(frame, position_fish_local[c], 2, (0, 165, 255), -1)
       
 
     position_list = dframe.position_fish_local.tolist()
@@ -622,21 +669,41 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(drawn_image,str(fish_id[indice]),(position_list[indice]), font, 1,(255,255,255),2)
+      cv2.putText(frame,str(fish_id[indice]),(position_list[indice]), font, 1,(0,0,0),2)
       
+    #plot esqueleton points    
+    #cv2.circle(frame, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
+    
+    for c in idx_local[:8]:
+      for coords in skeleton_list[c]:      
+      #tail plot
+      #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
+        cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
+
+
 
          
-    cv2.line(drawn_image, (427, 0), (427,870), (255, 255, 255), thickness=1)
-    cv2.line(drawn_image, (0, 417), (870,417), (255, 255, 255), thickness=1)   
+    cv2.line(frame, (427, 0), (427,870), (255, 255, 255), thickness=1)
+    cv2.line(frame, (0, 417), (870,417), (255, 255, 255), thickness=1)   
 
-   
+    filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1) | (dframe['fish_id'] == 2)]
+    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id', 'tail_points']]
+    filt_s_dataf.insert(loc=0,
+          column='frame_number',
+          value=idx_frame)
+    
+    filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
+    # not append because it is in development now
+  
     
     #cv2.rectangle(main, (int(x_y_line[0]), int(x_y_line[1])), (int(x_y_line[0])+100, int(x_y_line[1])+100), (36,255,12), 2)
       
     #show the image with filtered countours plotted
-    imS = cv2.resize(drawn_image, (900, 900))              # Resize image   
-    cv2.imshow('Frame',imS)
+    #imS = cv2.resize(drawn_image, (900, 900))              # Resize image   
+    #cv2.imshow('Frame',imS)
 
+    cv2.imshow('Main',frame)
+    
     previous_df = dframe.copy()  
     
     
