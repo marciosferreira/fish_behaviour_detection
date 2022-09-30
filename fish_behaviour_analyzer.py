@@ -111,8 +111,10 @@ is_first_iteraction[3] = False
  
 #pd.set_option('display.max_columns', None) 
 #background_img = cv2.imread(dynamic_background)
-bw_back = cv2.cvtColor(dynamic_background, cv2.COLOR_BGR2GRAY)
-bw_back = cv2.GaussianBlur(bw_back, (9,9) ,0) 
+bw_back = cv2.bilateralFilter(dynamic_background,9,75,75)
+
+bw_back = cv2.cvtColor(bw_back, cv2.COLOR_BGR2GRAY)
+#bw_back = cv2.GaussianBlur(bw_back, (9,9) ,0)
 
 #create a blank image to plot everything on
 blank_image = np.zeros((bw_back.shape[0], bw_back.shape[1], 3), np.uint8)
@@ -154,16 +156,20 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       #image = cv2.imread('1.pn)
       gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)    
       blur = cv2.medianBlur(gray, 9)
-      sharpen_kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-      sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
-
+      #sharpen_kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+      #sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
+      #blur = cv2.bilateralFilter(gray,9,75,75)
       # Threshold and morph close
-      #thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)[1]
+      
       thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
             cv2.THRESH_BINARY,11,2)
       kernel = np.ones((15,15),np.uint8)
       opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-
+      #thresh = cv2.threshold(gray, 15, 255, cv2.THRESH_BINARY)[1]
+      #thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+            #cv2.THRESH_BINARY,11,2)
+      #kernel = np.ones((15,15),np.uint8)
+      #opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
       # Find contours and filter using threshold area
       cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
       cnts = cnts[0] if len(cnts) == 2 else cnts[1]
@@ -202,8 +208,12 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     original_img = frame.copy()
 
     # Display the resulting frame
+        
+    #bw_mainImage = cv2.bilateralFilter(frame,9,75,75) # cv2.GaussianBlur(bw_mainImage, (9,9) ,0)
+
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    bw_mainImage = cv2.GaussianBlur(bw_mainImage, (9,9) ,0)
+    
+    cv2.imshow("sharpened", bw_mainImage)
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
           
