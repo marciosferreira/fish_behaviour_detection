@@ -284,7 +284,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
         max_value = max(distances_tail)
         max_index_tail = distances_tail.index(max_value)
-
+        tail_coords = list_of_points[max_index_tail]
+        
+        
         #discovering the head by calculating the fartherst point from tail
         distances_head = []
         for l in cnt:
@@ -313,28 +315,24 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         #the head coordinates
         aver_head = (aver_head[0][0], aver_head[0][1])
         
-        #squeleton continuity
-      
         
-       
-        sorted_skeleton = []               
-        while len(skeleton_coords) > 1:
-          distances_skeleton_from_head = []
-          for l in skeleton_coords:           
-            distance = math.sqrt(   (aver_head[0]-l[1])**2 + (aver_head[1]-l[0])**2    )
-            distances_skeleton_from_head.append(distance)
-          min_value = min(distances_skeleton_from_head)
-          min_index_skeleton = distances_skeleton_from_head.index(min_value)
-          min_skl_coord = skeleton_coords.pop(min_index_skeleton)          
-          sorted_skeleton.append(min_skl_coord)
-         
-        lenght = len(sorted_skeleton)      
-        step = int(lenght*.70/4)        
+        
+        
+        #squeleton continuity       
+        distances_skeleton_from_head = []
+        for l in skeleton_coords:           
+          distance = math.sqrt(   (aver_head[0]-l[1])**2 + (aver_head[1]-l[0])**2    )
+          distances_skeleton_from_head.append(distance)        
+        sorted_index = np.argsort(np.array(distances_skeleton_from_head))
+                  
+        lenght = len(skeleton_coords)      
+        step = int(lenght*.70/3)        
         tail_points_filtered = []
-        for x in range(-1, -step*4, -(step)):
-          tail_points_filtered.append(sorted_skeleton[x])        
-        
-        
+        for x in range(lenght-1, 0, -step):
+          tail_points_filtered.append(skeleton_coords[sorted_index[x]])        
+               
+        tail_points_filtered.reverse()
+
         
         
         
@@ -398,7 +396,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         idx_local.append(counter)          
         lenght_of_fish_local.append(fish_pectoral_lenght)
         position_fish_local.append(fish_COM)
-        fish_tail_local.append(list_of_points[max_index_tail])
+        fish_tail_local.append(tail_coords)
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)        
@@ -668,10 +666,10 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       #cv2.circle(frame, fish_tail_local[c], 2, (0, 0, 255), -1)
 
       #head
-      cv2.circle(frame, fish_head_local[c], 2, (0, 255, 0), -1)
+      cv2.circle(frame, fish_head_local[c], 2, (226, 43, 128), -1)
 
       #center of mass
-      cv2.circle(frame, position_fish_local[c], 2, (0, 165, 255), -1)
+      #cv2.circle(frame, position_fish_local[c], 2, (0, 165, 255), -1)
       
 
     position_list = dframe.position_fish_local.tolist()
