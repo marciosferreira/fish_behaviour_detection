@@ -1,5 +1,6 @@
 #Setup paramters
-quadr = (0,1,2,3)     # 0 for left up, 1 for left down, 2 for right up, 3 for right down or None for the four. 
+#quadr = (0,1,2,3)     
+# 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
 initial_frame = 1746  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
 final_frame = 3400  # set a very big number to go until the end of the video. e.g: 1000000
 path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
@@ -23,7 +24,7 @@ else:
 print(path_to_save + "/" + file_name + '.csv')
  
 with open(path_to_save + "/" + file_name + '.csv', 'w') as fd:
-  fd.write('frame_number, length_of_fish, center_of_mass, fish_tail, fish_head, quadrant, fish_area, fish_id, tail_points\n')
+  fd.write('frame_number, length_of_fish, center_of_mass, fish_tail, fish_head, quadrant, fish_area, fish_id, tail_points, quad_coord\n')
 
 from collections import deque
 import cv2
@@ -47,7 +48,7 @@ import pandas as pd
 #update_counter = 23
 #import matplotlib.pyplot as plt 
 #import imutils
-from skimage.morphology import skeletonize
+from skimage.morphology import skeletonize, thin
 
 
 
@@ -239,6 +240,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     template_blur = []
     template_dark = []
     skeleton_list = []
+    quad_coord = []
 
     counter = 0
     
@@ -252,11 +254,13 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
         #will be used for squeleton
         drawn_image_for_skeleton = blank_image.copy()
-        drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)        
+        drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)
         bw_mainImage_sk = cv2.cvtColor(drawn_image_for_skeleton, cv2.COLOR_BGR2GRAY)
         binarizedImage = bw_mainImage_sk / 255
         skeleton = skeletonize(binarizedImage)
-        skeleton = (skeleton*255).astype(np.uint8)      
+        skeleton = (skeleton*255).astype(np.uint8)
+        cv2.imshow("squeleton", skeleton)  
+      
         skeleton_coords = list(zip(*np.nonzero(skeleton)))
               
         #will be used to predict the size of the fish excluding the tail part
@@ -373,22 +377,18 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
         
-         # drawn quadrants
-        for coordinates in quadrants_lines:
-          x,y,w,h = coordinates
-          cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
-          #cv2.imshow('Main',frame)
+        ######print quad
         
         if (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2] +10) and fish_COM[1] < ((quadrants_lines[3][1] + quadrants_lines[3][3] +10))):  
-          quadrant_value = 0
-        elif (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2] +10) and fish_COM[1] > ((quadrants_lines[0][1] -10))):
           quadrant_value = 1
+        elif (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2] +10) and fish_COM[1] > ((quadrants_lines[0][1] -10))):
+          quadrant_value = 3
         elif (fish_COM[0] > (quadrants_lines[2][0] -10) and fish_COM[1] < ((quadrants_lines[2][1] + quadrants_lines[2][3] +10))):
           quadrant_value = 2
         elif (fish_COM[0] > (quadrants_lines[1][0] -10) and fish_COM[1] > (quadrants_lines[1][1] -10)):
-          quadrant_value = 3
+          quadrant_value = 0
         else:
-          print("erro!!!!!!!!!!!")
+          print("error!!!!!!!!!!!")
           quit()           
       
 
@@ -405,7 +405,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         template_area.append(area_rec)
         template_blur.append(0)
         template_dark.append(0)
-        skeleton_list.append(tail_points_filtered)       
+        skeleton_list.append(tail_points_filtered) 
+        quad_coord.append(quadrants_lines[quadrant_value])      
                       
         counter +=1
     
@@ -420,30 +421,11 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe['cnt_idx'] = countours_idx
     dframe["fish_id"] = None
     dframe["tail_points"] = skeleton_list
+    dframe["quad_coord"] = quad_coord
 
    
    
-    #######################################################################################################
-    
-    #create a XY if is the very begining of the script
-    
-    """if previous_df is None: 
-           
-      active[0] = "XY"
-      active[1] = "XY"
-      active[2] = "XY"
-      active[3] = "XY"      
-      
-      previous_df = dframe.copy() 
-      print(previous_df)
-      for i in quadr:          
-        previous_df.loc[previous_df['quadrant_local'] == i, 'fish_id'] = [x for x in ['X', 'Y']]
-        #histograms_X_Y = {"X" + i:deque(maxlen=60), "Y" + i:deque(maxlen=60)}
-        #list_idx = previous_df.loc[previous_df['quadrant_local'] == quadr].index.tolist()"""
-      
-          
-      
-    ########################################################################################################
+     ########################################################################################################
     
     #block 2
     # check if there is only one fish (overlap event), and if yes, recreate the XY and change to it
@@ -542,8 +524,6 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           active[row_q] = 'id'
           
         else:
-          #histograms_X_Y['Y'] = histograms_X_Y['Y']
-          #histograms_X_Y['X'] = histograms_X_Y['X']
           continue
               
         
@@ -584,45 +564,21 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
             s = d / (mdev if mdev else 1.)
             return data[s < m].tolist()          
         
-        #templates_of_ID1, templates_of_ID2, X_current_template_list, Y_current_template_list = reject_outliers(np.array(templates_of_ID1)), reject_outliers(np.array(templates_of_ID2)), reject_outliers(np.array(X_current_template_list)), reject_outliers(np.array(Y_current_template_list))     
 
         df1 = pd.DataFrame({'score': templates_of_ID1,
                   'group': 'id1'}) 
         
-        #print(df1.size)
-        #k2, p = stats.normaltest(templates_of_ID1)
-        #print(p)
-        #print(iqr(templates_of_ID1))
+   
         df2 = pd.DataFrame({'score': templates_of_ID2,
                   'group': 'id2'}) 
-        #print(df2.size)
-        #k2, p = stats.normaltest(templates_of_ID2)
-        #print(p)
-        #print(iqr(templates_of_ID2))
+        #
         df3 = pd.DataFrame({'score': X_current_template_list,
-                  'group': 'X'}) 
-        #print(df3.size)
-        #k2, p = stats.normaltest(X_current_template_list)
-        #print(p)
-      
-        #sns.distplot(X_current_template_list)
+                  'group': 'X'})     
 
         df4 = pd.DataFrame({'score': Y_current_template_list,
                   'group': 'Y'}) 
-        #print(df4.size)
-        #k2, p = stats.normaltest(Y_current_template_list)
-        #print(p)
-      
-        #sns.distplot(Y_current_template_list)
-        df = pd.concat([df1, df2, df3, df4])
         
-        
-        
-        #stre = sns.boxplot(x="score", y="group", data=df)
-        #sns.violinplot(x="score", y="group", data=df)
-        #plt.show(block = False) 
-                  
-        #cv2.waitKey(0)
+        df = pd.concat([df1, df2, df3, df4])     
         
         tukey = sp.posthoc_ttest(df, val_col='score', group_col='group', p_adjust='holm')
         
@@ -646,41 +602,20 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
       #####################################################################################   
     #block 6
-    # Time to draw everything on a template
-    #drawn_image = blank_image.copy()
-    
-    
-    
-
-    
-    
-    
-    
-    
-    #drawn_image = cv2.drawContours(drawn_image, contours, -1, color=(255,0,0),thickness=-1)
-
-    
+    # Time to draw everything on a template    
         
-    for c in idx_local[:8]:
-      #tail plot
-      #cv2.circle(frame, fish_tail_local[c], 2, (0, 0, 255), -1)
-
+    for c in idx_local[:8]:     
       #head
       cv2.circle(frame, fish_head_local[c], 2, (226, 43, 128), -1)
-
       #center of mass
-      #cv2.circle(frame, position_fish_local[c], 2, (0, 165, 255), -1)
-      
+      #cv2.circle(frame, position_fish_local[c], 2, (0, 165, 255), -1)      
 
     position_list = dframe.position_fish_local.tolist()
     fish_id = dframe.fish_id.tolist()
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(frame,str(fish_id[indice]),(position_list[indice]), font, 1,(0,0,0),2)
-      
-    #plot esqueleton points    
-    #cv2.circle(frame, (skeleton_list[c][x][1], skeleton_list[c][x][0]), 2, (0, 0, 255), -1)
+      cv2.putText(frame,str(fish_id[indice]),(position_list[indice]), font, 1,(0,0,0),2) 
     
     for c in idx_local[:8]:
       for coords in skeleton_list[c]:      
@@ -688,27 +623,24 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
         cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
 
+    #write the quadrants
+    for idx, coordinates in enumerate(quadrants_lines):
+      x,y,w,h = coordinates
+      cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
+      font = cv2.FONT_HERSHEY_SIMPLEX
+      cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
 
-
-         
-    cv2.line(frame, (427, 0), (427,870), (255, 255, 255), thickness=1)
-    cv2.line(frame, (0, 417), (870,417), (255, 255, 255), thickness=1)   
-
+   
+    
+    #select fields to write to csv
     filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1) | (dframe['fish_id'] == 2)]
-    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id', 'tail_points']]
+    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id', 'tail_points', 'quad_coord']]
     filt_s_dataf.insert(loc=0,
           column='frame_number',
           value=idx_frame)
     
     filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
-    # not append because it is in development now
-  
-    
-    #cv2.rectangle(main, (int(x_y_line[0]), int(x_y_line[1])), (int(x_y_line[0])+100, int(x_y_line[1])+100), (36,255,12), 2)
-      
-    #show the image with filtered countours plotted
-    #imS = cv2.resize(drawn_image, (900, 900))              # Resize image   
-    #cv2.imshow('Frame',imS)
+   
 
     cv2.imshow('Main',frame)
     
