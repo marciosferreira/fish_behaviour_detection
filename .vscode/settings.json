@@ -47,5 +47,6 @@
     "code-runner.showExecutionMessage": false,
     "code-runner.clearPreviousOutput": true,
     "vsintellicode.features.python.deepLearning": "enabled",
-    "editor.bracketPairColorization.enabled": true
+    "editor.bracketPairColorization.enabled": true,
+    "python.analysis.typeCheckingMode": "basic"
 }

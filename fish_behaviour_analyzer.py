@@ -1,8 +1,8 @@
 #Setup paramters
 #quadr = (0,1,2,3)     
 # 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
-initial_frame = 1746  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
-final_frame = 3400  # set a very big number to go until the end of the video. e.g: 1000000
+initial_frame = 1201  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
+final_frame = 19000  # set a very big number to go until the end of the video. e.g: 1000000
 path_to_video = 'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 #background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
 path_to_save = "C:/Users/marcio/Documents/results_Ian"  #where to save results
@@ -24,7 +24,7 @@ else:
 print(path_to_save + "/" + file_name + '.csv')
  
 with open(path_to_save + "/" + file_name + '.csv', 'w') as fd:
-  fd.write('frame_number, length_of_fish, center_of_mass, fish_tail, fish_head, quadrant, fish_area, fish_id, tail_points, quad_coord\n')
+  fd.write('frame_number,length_of_fish,center_of_mass,fish_tail,fish_head,quadrant,fish_area,fish_id,tail_points,quad_coord\n')
 
 from collections import deque
 import cv2
@@ -214,7 +214,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
-    cv2.imshow("sharpened", bw_mainImage)
+    #cv2.imshow("sharpened", bw_mainImage)
 
     diff = cv2.absdiff(bw_back, bw_mainImage)
           
@@ -259,7 +259,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         binarizedImage = bw_mainImage_sk / 255
         skeleton = skeletonize(binarizedImage)
         skeleton = (skeleton*255).astype(np.uint8)
-        cv2.imshow("squeleton", skeleton)  
+        #cv2.imshow("squeleton", skeleton)  
       
         skeleton_coords = list(zip(*np.nonzero(skeleton)))
               
@@ -333,7 +333,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         step = int(lenght*.70/3)        
         tail_points_filtered = []
         for x in range(lenght-1, 0, -step):
-          tail_points_filtered.append(skeleton_coords[sorted_index[x]])        
+          tail_points_filtered.append(skeleton_coords[sorted_index[x]])     #need to reverse tuple of squeleton as it is y,x not x,y  
                
         tail_points_filtered.reverse()
 
@@ -379,14 +379,14 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
         ######print quad
         
-        if (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2] +10) and fish_COM[1] < ((quadrants_lines[3][1] + quadrants_lines[3][3] +10))):  
+        if (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2] + 10) and (fish_COM[1] > (quadrants_lines[0][1] -10))):  
+          quadrant_value = 0
+        elif (fish_COM[0] > (quadrants_lines[1][0] -10) and fish_COM[1] > ((quadrants_lines[1][1] -10))):
           quadrant_value = 1
-        elif (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2] +10) and fish_COM[1] > ((quadrants_lines[0][1] -10))):
-          quadrant_value = 3
         elif (fish_COM[0] > (quadrants_lines[2][0] -10) and fish_COM[1] < ((quadrants_lines[2][1] + quadrants_lines[2][3] +10))):
           quadrant_value = 2
-        elif (fish_COM[0] > (quadrants_lines[1][0] -10) and fish_COM[1] > (quadrants_lines[1][1] -10)):
-          quadrant_value = 0
+        elif (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2] +10) and fish_COM[1] < (quadrants_lines[3][1] + quadrants_lines[3][3] +10)):
+          quadrant_value = 3
         else:
           print("error!!!!!!!!!!!")
           quit()           
@@ -615,13 +615,21 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(frame,str(fish_id[indice]),(position_list[indice]), font, 1,(0,0,0),2) 
+      cv2.putText(frame,str(fish_id[indice]) + "-" + str(fish_head_local[indice]) + "-" + str(skeleton_list[indice][1]),(position_list[indice]), font, 0.4,(0,0,0),1)
+      
+      
+    
+      
     
     for c in idx_local[:8]:
       for coords in skeleton_list[c]:      
       #tail plot
       #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
         cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
+        
+    
+
+
 
     #write the quadrants
     for idx, coordinates in enumerate(quadrants_lines):
