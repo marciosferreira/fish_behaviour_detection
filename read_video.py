@@ -19,6 +19,8 @@ while(cap.isOpened()):
     # Display the resulting frame
         cv2.imshow('Frame', frame)
         print(frame_n)
+        print("shape")
+        print(frame.shape)
         frame_n +=1
   
         
