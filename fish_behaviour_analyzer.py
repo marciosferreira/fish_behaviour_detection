@@ -330,7 +330,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         sorted_index = np.argsort(np.array(distances_skeleton_from_head))
                   
         lenght = len(skeleton_coords)      
-        step = int(lenght*.70/5)        
+        step = int(lenght*.70/3)        
         tail_points_filtered = []
         for x in range(lenght-1, 0, -step):
           tail_points_filtered.append(skeleton_coords[sorted_index[x]])     #need to reverse tuple of squeleton as it is y,x not x,y  

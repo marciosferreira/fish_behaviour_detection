@@ -91,8 +91,8 @@ for idx_frame in range(0,final_frame,1):
             import math
 
             def calc_rotation(coords_body):
-              x = coords_body[0][0] - coords_body[2][0]             
-              y = coords_body[0][1] - coords_body[2][1]              
+              x = coords_body[0][0] - coords_body[1][0]             
+              y = coords_body[0][1] - coords_body[1][1]              
               dual_degree = math.atan2(y*-1, x) * 180 / np.pi
               if dual_degree < 0:
                 #pass
@@ -206,20 +206,35 @@ for idx_frame in range(0,final_frame,1):
 
             x_list_2 = list(zip(*corrected_angle))[0]
             y_list_2 = list(zip(*corrected_angle))[1]
+            
+            x_norm = x_list_2 #[i-x_list_2[0] for i in x_list_2]
+            y_norm = y_list_2 #[i-y_list_2[0] for i in y_list_2]
+            
+            x_norm_2 = [float(i)/sum(x_norm) for i in x_norm]
+            y_norm_2 = [float(i)/y_norm[0] for i in y_norm]
+            
+            xnew = np.linspace(x_norm_2[0], x_norm_2[-1])
+            
+            model4 = np.poly1d(np.polyfit(x_norm_2, y_norm_2, 3))
+            plt.plot(xnew, model4(xnew))
+            
+            # Define interpolators.
+            #f_linear = interp1d(x_norm, y_norm)
+            #f_cubic = interp1d(x_norm, y_norm, kind='quadratic')
           
-            plt.plot(x_list, y_list, 'o', label='data')
-            plt.draw()
-            plt.plot(x_list_2, y_list_2, '+', label='data')
+            #plt.plot(x_list, y_list, 'o', label='data')
+            #plt.draw()
+            #plt.plot(x_norm_2, y_norm_2, 'o', label='data')
             plt.draw()
             #plt.plot(xnew, f_linear(xnew), '-', label='linear')
-            plt.xlim(0,848)
-            plt.ylim(0,870)
+            plt.xlim(0.1925, 0.21)
+           # plt.ylim(0.9,1.1)
             #plt.plot(xnew, f_cubic(xnew), label='cubic')
             #plt.legend(loc='best')
             
             #plt.draw()
             plt.pause(0.5)
-            plt.clf()
+            #plt.clf()
             pass
      
           #plt.show()
