@@ -4,16 +4,23 @@
 import cv2
 import seaborn as sns
 import matplotlib.pyplot as plt 
-
+import pandas as pd
 import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy import stats
+
 
 with open('C:/Users/marcio/Documents/results_Ian/dict.txt', 'rb') as handle:
   frames_numbers = pickle.loads(handle.read())
 
+
+df = pd.DataFrame.from_dict(frames_numbers, orient='index')
+df.columns=["center_of_mass_x", "center_of_mass_y", "sequence", "tail_coords"]
+df["angle_corr_tail"] = None
+print(df)
 
 
 
@@ -47,8 +54,7 @@ for idx_frame in range(0,final_frame,1):
     if ret == True:
       # Display the resulting frame
       
-          print("xxxxxxxxxx")
-          print(frames_numbers[idx_frame])
+     
       
           if previous_id != frames_numbers[idx_frame][2]:
             color = next(color_cycle)
@@ -101,7 +107,6 @@ for idx_frame in range(0,final_frame,1):
 
             angle = calc_rotation(tuple_y_inv)
 
-            print("the angles")
             
             
             import math
@@ -119,90 +124,21 @@ for idx_frame in range(0,final_frame,1):
                
 
                 return qx, qy
-            print(angle)
+          
             if angle > 180:
               angle = 360-angle+180
             else:
               angle = 180-angle
           
             
-            print(angle) 
+           
               
             corrected_angle = [rotate(i, math.radians(angle), tuple_y_inv[0]) for i in tuple_y_inv]
             
        
      
-            '''
-            #check if x is not incremental, as fish in vertical position, then swap x and Y if true (avoiding error)            
-            incremental = True
-            i = 0
-            max_value = 0
-            while i < len(x_list):                
-              if max(max_value, x_list[i]) <= max_value:
-                incremental = False
-                break
-              else:               
-                max_value = max(max_value, x_list[i])
-                i += 1
-            
-            decremental = True
-            i = 0
-            min_value = 1000
-            while i < len(x_list):                
-              if min(min_value, x_list[i]) >= min_value:
-                
-                decremental = False
-                break
-              else:
-                min_value = min(min_value, x_list[i])              
-                i += 1
-                
-            print(x_list)
-            print(y_list)           
-            
-            if incremental == False and decremental == False:
-              x_list, y_list = y_list, x_list
-              
-              
-              x_final = [float(i)/min(x_list) for i in x_list]             
-              y_final = [float(i)/min(y_list) for i in y_list]
-              
-              
-             
-                
-              print("swapped")
-              print(x_list)
-              print(y_list)
-              print(x_final)
-              print(y_final)
-              print("end")
-
-'''
-    
-            #x_norm = [float(i)/sum(x_final) for i in x_final]
-            #y_norm = [float(i)/sum(y_final) for i in y_final]
-          
-           
-            #x_norm = x_norm[1:]
-            #y_norm = y_norm[1:]
         
-            #model4 = np.poly1d(np.polyfit(x_list, x_list, 3))
-            #print(model4.coefficients)
-              
-      
-            #xnew = np.linspace(x_list[0], x_list[-1])
             
-            
-
-            # Define interpolators.
-            #f_linear = interp1d(x_norm, y_norm)
-            #f_cubic = interp1d(x_norm, y_norm, kind='quadratic')
-            
-            #plt.plot(xnew, model4(xnew), '--', color='red')
-
-            # Plot.
-            #plt.xlim([1, 1.08])
-            #plt.ylim([0.1, 0.2])
 
             x_list_2 = list(zip(*corrected_angle))[0]
             y_list_2 = list(zip(*corrected_angle))[1]
@@ -210,31 +146,44 @@ for idx_frame in range(0,final_frame,1):
             x_norm = x_list_2 #[i-x_list_2[0] for i in x_list_2]
             y_norm = y_list_2 #[i-y_list_2[0] for i in y_list_2]
             
-            x_norm_2 = [float(i)/sum(x_norm) for i in x_norm]
+            
+            
+            x_norm_2 = [float(i)/x_norm[0] for i in x_norm]
             y_norm_2 = [float(i)/y_norm[0] for i in y_norm]
+            
+            
+            
+            #corrected_tails_points = tuple(zip(x_norm_2, y_norm_2))
+            corrected_tails_points = [list(a) for a in zip(x_norm_2, y_norm_2)]
+            #insert normalized to df
+            df.at[idx_frame, "angle_corr_tail"] = corrected_tails_points        # frames_numbers[idx_frame]
+            
+            
+         
             
             xnew = np.linspace(x_norm_2[0], x_norm_2[-1])
             
-            model4 = np.poly1d(np.polyfit(x_norm_2, y_norm_2, 3))
-            plt.plot(xnew, model4(xnew))
+            
+            #model4 = np.poly1d(np.polyfit(x_norm_2, y_norm_2, 2))
+            #plt.plot(xnew, model4(xnew))
             
             # Define interpolators.
             #f_linear = interp1d(x_norm, y_norm)
-            #f_cubic = interp1d(x_norm, y_norm, kind='quadratic')
+            f_cubic = interp1d(x_norm_2, y_norm_2, kind='quadratic')
           
-            #plt.plot(x_list, y_list, 'o', label='data')
+            plt.plot(x_norm_2, y_norm_2, 'o', label='data')
             #plt.draw()
             #plt.plot(x_norm_2, y_norm_2, 'o', label='data')
             plt.draw()
             #plt.plot(xnew, f_linear(xnew), '-', label='linear')
-            plt.xlim(0.1925, 0.21)
-           # plt.ylim(0.9,1.1)
-            #plt.plot(xnew, f_cubic(xnew), label='cubic')
+            #plt.xlim(0.1925, 0.21)
+            plt.ylim(1.02, 0.98)
+            plt.plot(xnew, f_cubic(xnew), label='quadratic')
             #plt.legend(loc='best')
             
             #plt.draw()
-            plt.pause(0.5)
-            #plt.clf()
+            #plt.pause(0.0)
+            plt.clf()
             pass
      
           #plt.show()
@@ -253,7 +202,7 @@ for idx_frame in range(0,final_frame,1):
          
          
 
-          cv2.waitKey(100)
+          #cv2.waitKey(100)
           #cv2.destroyAllWindows()          
           #frame_n +=1
     
@@ -273,6 +222,71 @@ for idx_frame in range(0,final_frame,1):
   else:
     #print("no frames 2")
     continue
-cv2.waitKey(0)  
-print("before ending")  
-cv2.destroyAllWindows()    
+#cv2.waitKey(0)  
+cv2.destroyAllWindows() 
+
+
+def distances(t):
+  #x_tuple = tuple(zip(*x))[0]
+  #y_tuple = tuple(zip(*x))[1]
+  distances = []
+  for idx, _ in enumerate(t):
+    if idx > 0:
+      distance = math.hypot(t[idx][0] - t[idx-1][0], t[idx][1] - t[idx-1][1])
+      distances.append(distance)
+       
+  return sum(distances)
+
+  
+df["distances"] = df["angle_corr_tail"].apply(distances)
+
+#df["max_row_distance"] = np.NaN
+
+summed_distances = df["distances"].mean()/4
+
+def coord_calc(dataf):
+  tail_points = dataf["angle_corr_tail"]
+  frame = dataf["index"]
+  print(frame)
+  for idx, _ in enumerate(tail_points):
+    if idx > 0:
+      distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
+      if distance > summed_distances:
+        while distance > summed_distances:
+          slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
+          for i in range(idx, 5):
+            tail_points[i][0] = tail_points[i][0]-0.00001
+          tail_points[idx][1] = slope*tail_points[idx][0] + intercept           
+          distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
+      else:
+        while distance < summed_distances:
+          slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
+          for i in range(idx, 5):
+            tail_points[i][0] = tail_points[i][0]+0.00001
+          #tail_points[idx][0] = tail_points[idx][0]+0.00001
+          tail_points[idx][1] = slope*tail_points[idx][0] + intercept
+          distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
+
+  
+
+df = df.reset_index()
+
+print("the reset")
+print(df)
+
+df.apply(coord_calc, axis=1) 
+
+
+
+for row in df.iterrows():
+
+  
+  x_list = list(zip(*row[1][5]))[0]
+  y_list = list(zip(*row[1][5]))[1]
+  
+  plt.ylim(1.02, 0.98)
+  plt.xlim(1, 1.08)
+  #plt.plot(xnew, f_cubic(xnew), label='quadratic')
+  plt.plot(x_list, y_list, 'o', label='data')
+  plt.pause(0.5)
+  plt.clf()
