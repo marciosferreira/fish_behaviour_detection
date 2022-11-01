@@ -248,14 +248,14 @@ def coord_calc(dataf):
         while distance > summed_distances:
           slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
           for i in range(idx, 5):
-            tail_points[i][0] = tail_points[i][0]-0.00001
+            tail_points[i][0] = tail_points[i][0]-0.0001
           tail_points[idx][1] = slope*tail_points[idx][0] + intercept           
           distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
       else:
         while distance < summed_distances:
           slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
           for i in range(idx, 5):
-            tail_points[i][0] = tail_points[i][0]+0.00001
+            tail_points[i][0] = tail_points[i][0]+0.0001
           #tail_points[idx][0] = tail_points[idx][0]+0.00001
           tail_points[idx][1] = slope*tail_points[idx][0] + intercept
           distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
@@ -297,21 +297,34 @@ for idx_frame in range(0,final_frame,1):
           x_list = list(zip(*tail_coordinates))[0]
           y_list = list(zip(*tail_coordinates))[1]
           
-          plt.ylim(1.02, 0.98)
-          plt.xlim(1, 1.08)
+          
           
           xnew = np.linspace(x_list[0], x_list[-1])           
             
           #f_cubic = interp1d(x_list, y_list, kind='quadratic')
           #plt.plot(xnew, f_cubic(xnew), label='quadratic')
-          plt.plot(x_list, y_list, 'o', label='data')
-          
+          plt.figure(1)
+          plt.ylim(1.02, 0.98)
+          plt.xlim(1, 1.08)
+          plt.plot(x_list, y_list, 'o', label='data')          
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-          plt.plot(xnew, model4(xnew))           
-            
+          plt.plot(xnew, model4(xnew))
+          plt.show()
           plt.pause(0.1)
+                
+          
+          plt.figure(2)
+          plt.ylim(1.02, 0.98)
+          plt.xlim(1, 1.08)
+          plt.plot(x_list, y_list, 'o', label='data')          
+          model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
+          plt.plot(xnew, model4(xnew))
+          plt.show()          
+          
+          
+          plt.pause(2)
           #plt.clf()
-          #plt.clf()
+          plt.close(1)    
 
           
           
