@@ -10,6 +10,8 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 from scipy.interpolate import interp1d
+import math
+
 
 with open('C:/Users/marcio/Documents/results_Ian/dict.txt', 'rb') as handle:
   frames_numbers = pickle.loads(handle.read())
@@ -310,7 +312,7 @@ for idx_frame in range(0,final_frame,1):
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
           plt.show()
-          plt.pause(0.1)
+          plt.pause(0.3)
                 
           
           plt.figure(2)
@@ -319,13 +321,28 @@ for idx_frame in range(0,final_frame,1):
           plt.plot(x_list, y_list, 'o', label='data')          
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
-          plt.show()          
+          plt.show()
+          plt.pause(0.3)         
           
           
-          plt.pause(2)
+          #plt.pause(2)
           #plt.clf()
-          plt.close(1)    
+                    
+          x_0 = xnew[0]
+          x_1 = xnew[int(len(xnew)/4)]
+          x_2 = xnew[int(len(xnew)/4*2)]
+          x_3 = xnew[int(len(xnew)/4*3)] 
+          x_4 = xnew[-1]
+                    
+          slope1 = (model4(x_1) - model4(x_0))/(x_1 - x_0)
+          slope2 = (model4(x_3) - model4(x_2))/(x_3 - x_2)         
+          angle =  math.degrees(math.atan((slope2-slope1)/(1+(slope2*slope1))))         
 
+          print("the angle")
+          print(angle)
+          print("the end angle")
+            
+          plt.close(1)
           
           
           
@@ -349,9 +366,16 @@ for idx_frame in range(0,final_frame,1):
     #print("no frames 2")
     continue
 #cv2.waitKey(0)  
-cv2.destroyAllWindows() 
+cv2.destroyAllWindows()
+df_to_analyze = df[["sequence", "angle_corr_tail"]]
+df_to_analyze["com"] = df.apply(lambda x: (x.center_of_mass_x, x.center_of_mass_y), axis=1)
 
+#df_to_analyze.rename(columns={"angle_corr_tail":"tail_coords"}, inplace=True)
+df_to_analyze.rename({'angle_corr_tail': 'tail_coords'}, axis=1, inplace=True)
 
+#df.loc[:, 'points'] = df.points.apply(lambda x: x*2)
+df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
+df_to_analyze.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)
 
 
 
