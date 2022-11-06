@@ -18,7 +18,7 @@ with open('C:/Users/marcio/Documents/results_Ian/dict.txt', 'rb') as handle:
 
 
 df = pd.DataFrame.from_dict(frames_numbers, orient='index')
-df.columns=["center_of_mass_x", "center_of_mass_y", "sequence", "tail_coords"]
+df.columns=["fish_head_x", "fish_head_y", "sequence", "tail_coords"]
 df["angle_corr_tail"] = None
 print(df)
 
@@ -312,7 +312,7 @@ for idx_frame in range(0,final_frame,1):
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
           plt.show()
-          plt.pause(0.3)
+          #plt.pause(0.3)
                 
           
           plt.figure(2)
@@ -322,7 +322,7 @@ for idx_frame in range(0,final_frame,1):
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
           plt.show()
-          plt.pause(0.3)         
+          #plt.pause(0.3)         
           
           
           #plt.pause(2)
@@ -368,7 +368,7 @@ for idx_frame in range(0,final_frame,1):
 #cv2.waitKey(0)  
 cv2.destroyAllWindows()
 df_to_analyze = df[["sequence", "angle_corr_tail"]]
-df_to_analyze["com"] = df.apply(lambda x: (x.center_of_mass_x, x.center_of_mass_y), axis=1)
+df_to_analyze["head"] = df.apply(lambda x: (x.fish_head_x, x.fish_head_y), axis=1)
 
 #df_to_analyze.rename(columns={"angle_corr_tail":"tail_coords"}, inplace=True)
 df_to_analyze.rename({'angle_corr_tail': 'tail_coords'}, axis=1, inplace=True)
