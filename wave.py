@@ -76,6 +76,8 @@ for idx_frame in range(0,final_frame,1):
           
           cv2.imshow('Frame', frame)
           
+          cv2.waitKey(300)
+          
   
 
           if 1 == 1:
@@ -312,7 +314,7 @@ for idx_frame in range(0,final_frame,1):
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
           plt.show()
-          #plt.pause(0.3)
+          plt.pause(0.3)
                 
           
           plt.figure(2)
@@ -322,7 +324,8 @@ for idx_frame in range(0,final_frame,1):
           model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
           plt.plot(xnew, model4(xnew))
           plt.show()
-          #plt.pause(0.3)         
+          #plt.pause(1)  
+          cv2.waitKey(3)       
           
           
           #plt.pause(2)
