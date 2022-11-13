@@ -2,6 +2,7 @@
 
 # Check if camera opened successfully
 import pickle
+import winsound
 
 import cv2
 from matplotlib import pyplot as plt
@@ -12,14 +13,15 @@ from scipy import stats
 from scipy.interpolate import interp1d
 import math
 
+df = pd.read_csv("C:/Users/marcio/Documents/fish_analyzer_rotated.csv")
 
-with open('C:/Users/marcio/Documents/results_Ian/dict.txt', 'rb') as handle:
-  frames_numbers = pickle.loads(handle.read())
+#tail_coords
 
 
-df = pd.DataFrame.from_dict(frames_numbers, orient='index')
+
 df.columns=["fish_head_x", "fish_head_y", "sequence", "tail_coords"]
 df["angle_corr_tail"] = None
+df["tail_poly_corrected"] = None
 print(df)
 
 
@@ -76,7 +78,7 @@ for idx_frame in range(0,final_frame,1):
           
           cv2.imshow('Frame', frame)
           
-          cv2.waitKey(300)
+          #cv2.waitKey(300)
           
   
 
@@ -100,8 +102,8 @@ for idx_frame in range(0,final_frame,1):
             import math
 
             def calc_rotation(coords_body):
-              x = coords_body[0][0] - coords_body[1][0]             
-              y = coords_body[0][1] - coords_body[1][1]              
+              x = coords_body[1][0] - coords_body[2][0]             
+              y = coords_body[1][1] - coords_body[2][1]              
               dual_degree = math.atan2(y*-1, x) * 180 / np.pi
               if dual_degree < 0:
                 #pass
@@ -136,7 +138,7 @@ for idx_frame in range(0,final_frame,1):
             
            
               
-            corrected_angle = [rotate(i, math.radians(angle), tuple_y_inv[0]) for i in tuple_y_inv]
+            corrected_angle = [rotate(i, math.radians(angle), tuple_y_inv[1]) for i in tuple_y_inv]
             
        
      
@@ -151,8 +153,8 @@ for idx_frame in range(0,final_frame,1):
             
             
             
-            x_norm_2 = [float(i)/x_norm[0] for i in x_norm]
-            y_norm_2 = [float(i)/y_norm[0] for i in y_norm]
+            x_norm_2 = [float(i)/x_norm[1] for i in x_norm]
+            y_norm_2 = [float(i)/y_norm[1] for i in y_norm]
             
             
             
@@ -274,110 +276,156 @@ df.apply(coord_calc, axis=1)
 
 
 
-print(df)
 pass
 
 
 
 # Read until video is completed
-for idx_frame in range(0,final_frame,1):  
-  if idx_frame in frames_numbers:  
-    print(idx_frame)   
-    cap.set(1, idx_frame)    
-    # Capture frame-by-frame
-    ret, frame = cap.read()
-    if ret == True:      
-          if previous_id != frames_numbers[idx_frame][2]:
-            color = next(color_cycle)
-          cv2.rectangle(frame, (frames_numbers[idx_frame][0]-30,frames_numbers[idx_frame][1]-30), (frames_numbers[idx_frame][0]+30, frames_numbers[idx_frame][1]+30), color, 2)
-          font = cv2.FONT_HERSHEY_SIMPLEX
-          cv2.putText(frame, str(frames_numbers[idx_frame][2]),(frames_numbers[idx_frame][0]-30,frames_numbers[idx_frame][1]-30), font, 0.5, (0,0,0), 1) 
-          previous_id = frames_numbers[idx_frame][2]          
-          for coords in frames_numbers[idx_frame][-1]:         
-            cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)           
-          cv2.imshow('Frame', frame)
-          
-          tail_coordinates = df.loc[idx_frame]['angle_corr_tail']
-          x_list = list(zip(*tail_coordinates))[0]
-          y_list = list(zip(*tail_coordinates))[1]
-          
-          
-          
-          xnew = np.linspace(x_list[0], x_list[-1])           
+sequences = df["sequence"].unique()
+for sequence in sequences:
+  #sequence = 110
+  
+  sub_seq = df.loc[df["sequence"]== sequence]
+  for idx_frame in sub_seq.index: 
+  
+  
+    if idx_frame in frames_numbers:  
+      print(idx_frame)
+      #if (idx_frame < 2950) | (idx_frame > 2955):
+        #continue   
+      cap.set(1, idx_frame)    
+      # Capture frame-by-frame
+      ret, frame = cap.read()
+      if ret == True:      
+            if previous_id != frames_numbers[idx_frame][2]:
+              frequency = 1000  # Set Frequency To 2500 Hertz
+              duration = 1000  # Set Duration To 1000 ms == 1 second
+              #winsound.Beep(frequency, duration)
+              color = next(color_cycle)
+            cv2.rectangle(frame, (frames_numbers[idx_frame][0]-30,frames_numbers[idx_frame][1]-30), (frames_numbers[idx_frame][0]+30, frames_numbers[idx_frame][1]+30), color, 2)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(frame, str(frames_numbers[idx_frame][2]),(frames_numbers[idx_frame][0]-30,frames_numbers[idx_frame][1]-30), font, 0.5, (0,0,0), 1) 
+            previous_id = frames_numbers[idx_frame][2]          
+            for coords in frames_numbers[idx_frame][-1]:         
+              cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)           
+            #cv2.imshow('Frame', frame)
             
-          #f_cubic = interp1d(x_list, y_list, kind='quadratic')
-          #plt.plot(xnew, f_cubic(xnew), label='quadratic')
-          plt.figure(1)
-          plt.ylim(1.02, 0.98)
-          plt.xlim(1, 1.08)
-          plt.plot(x_list, y_list, 'o', label='data')          
-          model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-          plt.plot(xnew, model4(xnew))
-          plt.show()
-          plt.pause(0.3)
-                
-          
-          plt.figure(2)
-          plt.ylim(1.02, 0.98)
-          plt.xlim(1, 1.08)
-          plt.plot(x_list, y_list, 'o', label='data')          
-          model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-          plt.plot(xnew, model4(xnew))
-          plt.show()
-          #plt.pause(1)  
-          cv2.waitKey(3)       
-          
-          
-          #plt.pause(2)
-          #plt.clf()
-                    
-          x_0 = xnew[0]
-          x_1 = xnew[int(len(xnew)/4)]
-          x_2 = xnew[int(len(xnew)/4*2)]
-          x_3 = xnew[int(len(xnew)/4*3)] 
-          x_4 = xnew[-1]
-                    
-          slope1 = (model4(x_1) - model4(x_0))/(x_1 - x_0)
-          slope2 = (model4(x_3) - model4(x_2))/(x_3 - x_2)         
-          angle =  math.degrees(math.atan((slope2-slope1)/(1+(slope2*slope1))))         
+            
+            tail_coordinates = df.loc[idx_frame]['angle_corr_tail']
+            x_list = list(zip(*tail_coordinates))[0]
+            y_list = list(zip(*tail_coordinates))[1]
+            
+            
+            
+            xnew = np.linspace(x_list[0], x_list[-1])           
+              
+            #f_cubic = interp1d(x_list, y_list, kind='quadratic')
+            #plt.plot(xnew, f_cubic(xnew), label='quadratic')
+            
+            plt.figure(1)
+            plt.ylim(1.02, 0.98)
+            plt.xlim(1, 1.08)
+            plt.plot(x_list, y_list, 'o', label='data')          
+            model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
+            plt.plot(xnew, model4(xnew))
+            plt.show()
+            #plt.pause(0.3)
+                  
+            
+            plt.figure(2)
+            plt.ylim(1.02, 0.98)
+            plt.xlim(0.970, 1.08)
+            plt.plot(x_list, y_list, 'o', label='data')          
+            #model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
+            
+            
+            #substitue values in coords by the poly fir found
+            
+            y_modeled = tuple(model4(x_list))
+            x_modeled = tuple(x_list)
+            
+            
+            x_norm = [float(i)/x_modeled[1] for i in x_modeled]
+            y_norm = [float(i)/y_modeled[1] for i in y_modeled]
+            
+            #df.iloc[idx_frame, 5] = 
+            
+            df.at[idx_frame, "tail_poly_corrected"] = tuple(zip(x_norm, y_norm))
+            
+            
+            #tuple(zip(x_modeled, model4(x_modeled)))
 
-          print("the angle")
-          print(angle)
-          print("the end angle")
             
-          plt.close(1)
-          
-          
-          
-          
-          
-          
-          
-          
-                     
-      # Press Q on keyboard to exit
-          if cv2.waitKey(25) & 0xFF == ord('q'):
-    
-              break
+            
+            
+            
+            
+            
+            plt.plot(xnew, model4(xnew))
+            plt.show()
+            #plt.pause(1)  
+            #cv2.waitKey(3)       
+            
+            
+            #plt.pause(2)
+            #plt.clf()
+                      
+            x_0 = xnew[0]
+            x_1 = xnew[int(len(xnew)/4)]
+            x_2 = xnew[int(len(xnew)/4*2)]
+            x_3 = xnew[int(len(xnew)/4*3)] 
+            x_4 = xnew[-1]
+                      
+            slope1 = (model4(x_1) - model4(x_0))/(x_1 - x_0)
+            slope2 = (model4(x_3) - model4(x_2))/(x_3 - x_2)         
+            angle =  math.degrees(math.atan((slope2-slope1)/(1+(slope2*slope1))))         
+
+            print("the angle")
+            print(angle)
+            print("frame number")
+            print(idx_frame)
+            
+            cv2.imshow('Frame', frame)
+            #cv2.waitKey(0)
+            
+              
+            plt.close(1)
+            
+            
+            
+            
+            
+            
+            
+            
+                      
+        # Press Q on keyboard to exit
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+      
+                break
+      else:
+        print("no frames 1")
+        break
+        
+        
+  # Break the loop if no frame is retrieved
     else:
-      print("no frames 1")
-      break
-      
-      
-# Break the loop if no frame is retrieved
-  else:
-    #print("no frames 2")
-    continue
-#cv2.waitKey(0)  
+      #print("no frames 2")
+      continue
+  #cv2.waitKey(0)
+
+  plt.clf()  
 cv2.destroyAllWindows()
-df_to_analyze = df[["sequence", "angle_corr_tail"]]
+df_to_analyze = df[["sequence", "tail_poly_corrected"]]
 df_to_analyze["head"] = df.apply(lambda x: (x.fish_head_x, x.fish_head_y), axis=1)
 
 #df_to_analyze.rename(columns={"angle_corr_tail":"tail_coords"}, inplace=True)
-df_to_analyze.rename({'angle_corr_tail': 'tail_coords'}, axis=1, inplace=True)
+df_to_analyze.rename({'tail_poly_corrected': 'tail_coords'}, axis=1, inplace=True)
 
 #df.loc[:, 'points'] = df.points.apply(lambda x: x*2)
 df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
+#df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([(int(n*1000)) for n in sub]) for sub in x))
+
 df_to_analyze.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)
 
 
