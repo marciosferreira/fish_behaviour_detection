@@ -1,4 +1,6 @@
 
-
-if 1==1 and 2==2:
-    print("'ok")
+a = None
+if isinstance(a, tuple):
+    print("is tuple")
+else:
+    print("None")
