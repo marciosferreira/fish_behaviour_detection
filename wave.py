@@ -23,6 +23,9 @@ df = pd.read_csv("C:/Users/marcio/Documents/fish_analyzer_rotated.csv").set_inde
 df["angle_corr_tail"] = None
 df["tail_poly_corrected"] = None
 df["distances"] = np.NaN
+df["tail_uniformity"] = 1.0
+df["good_tail"] = False
+
 
 
 
@@ -50,7 +53,7 @@ color_cycle = cycle(((0,0,255),(0,255,0),(255,0,0)))
 #frame_n = 0
 
 
-for quadrant in [1]:
+for quadrant in [3]:
   for fish_ident in [1]:     
     frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
 
@@ -68,7 +71,7 @@ for quadrant in [1]:
         ret, frame = cap.read()
         if ret == True:
           
-              the_row = df.loc[df.index == idx_frame]
+              the_row = df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)]
               #print(frames_numbers[idx_frame])
               if previous_id != the_row["sequence"].iloc[0]:
               #if previous_id != frames_numbers[idx_frame][2]:
@@ -233,7 +236,12 @@ for quadrant in [1]:
           
       return sum(distances)
     
-    df['angle_corr_tail'] = df['angle_corr_tail'].apply(ast.literal_eval)
+    #df['angle_corr_tail'] = df['angle_corr_tail'].apply(ast.literal_eval)
+    def literal_set(list_):
+      if isinstance(list_, str):
+        return ast.literal_eval(list_)
+    df['angle_corr_tail'] = df['angle_corr_tail'].apply(literal_set)
+
 
     df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'] = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'].apply(distances)
     #df["distances"] = df["angle_corr_tail"].apply(distances)
@@ -276,6 +284,24 @@ for quadrant in [1]:
 
 
 
+    
+    def vari(the_list):
+      if isinstance(the_list, list):
+        y_list = list(zip(*the_list))[1]        
+        result = np.std(y_list[0:3])
+        if result is not None:      
+          return result
+        else:
+          return 1.0
+      else:
+        return 1.0
+        
+    df["tail_uniformity"] = df. angle_corr_tail.apply(vari)
+    
+    df["good_tail"] = df["tail_uniformity"].apply(lambda x: True if (x < 0.005) else False)
+    #plt.hist(df["tail_uniformity"], bins = 30)
+    #plt.show()
+
     sequences = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'sequence'].unique()
 
     #sequences = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "sequence"].unique()
@@ -300,7 +326,7 @@ for quadrant in [1]:
           ret, frame = cap.read()
           if ret == True:
           
-            the_row = df.loc[df.index == idx_frame]
+            the_row = df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)]
             #print(frames_numbers[idx_frame])
             if previous_id != the_row["sequence"].iloc[0]:
             #if previous_id != frames_numbers[idx_frame][2]:
@@ -308,7 +334,7 @@ for quadrant in [1]:
             cv2.rectangle(frame, (the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), (the_row["center_of_mass"].iloc[0][0]+30, the_row["center_of_mass"].iloc[0][1]+30), color, 2)
             font = cv2.FONT_HERSHEY_SIMPLEX
             #cv2.putText(frame, str(the_row["fish_head"]iloc[0][0], the_row["fish_head"].iloc[0][0]-30), (the_row["fish_head"].iloc[0][1]-30, the_row["fish_head"].iloc[0][1]-30), font, 0.5, (0,0,0), 1) 
-            cv2.putText(frame, str(the_row["sequence"].iloc[0]),(the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), font, 0.5, (0,0,0), 1)
+            cv2.putText(frame, str(the_row["sequence"].iloc[0]) + " " + str(the_row["tail_uniformity"].iloc[0]),(the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), font, 0.5, (0,0,0), 1)
             previous_id = the_row["sequence"].iloc[0]
             
             
@@ -323,7 +349,7 @@ for quadrant in [1]:
               
                 
                 
-            tail_coordinates = df.loc[idx_frame]['angle_corr_tail']
+            tail_coordinates = the_row['angle_corr_tail'].iloc[0]
             x_list = list(zip(*tail_coordinates))[0]
             y_list = list(zip(*tail_coordinates))[1]
             
@@ -334,22 +360,24 @@ for quadrant in [1]:
             #f_cubic = interp1d(x_list, y_list, kind='quadratic')
             #plt.plot(xnew, f_cubic(xnew), label='quadratic')
             
+            print(the_row["tail_uniformity"])
+            #if the_row["good_tail"].iloc[0] == True:
             plt.figure(1)
-            plt.ylim(1.02, 0.98)
-            plt.xlim(1, 1.08)
+            #plt.ylim(1.02, 0.98)
             #plt.xlim(1, 1.08)
-         
+            #plt.xlim(1, 1.08)
+        
           
             plt.plot(x_list, y_list, 'o', label='data')          
             model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
             plt.plot(xnew, model4(xnew))
-            plt.show()
+            #plt.show()
             #plt.pause(0.3)
                   
             
             plt.figure(2)
-            plt.ylim(1.02, 0.98)
-            plt.xlim(1, 1.08)
+            #plt.ylim(1.02, 0.98)
+            #plt.xlim(1, 1.08)
             #plt.xlim(0.970, 1.08)
             plt.plot(x_list, y_list, 'o', label='data')          
             #model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
@@ -361,13 +389,13 @@ for quadrant in [1]:
             x_modeled = tuple(x_list)
             
             
-            x_norm = [float(i)/x_modeled[1] for i in x_modeled]
-            y_norm = [float(i)/y_modeled[1] for i in y_modeled]
+            #x_norm = [float(i)/x_modeled[0] for i in x_modeled]
+            #y_norm = [float(i)/y_modeled[1] for i in y_modeled]
             
             #df.iloc[idx_frame, 5] = 
             
-            df.at[idx_frame, "tail_poly_corrected"] = tuple(zip(x_norm, y_norm))
-            
+            #df.at[idx_frame, "tail_poly_corrected"] = tuple(zip(x_norm, y_norm))
+            df.loc[(df.index== idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_poly_corrected"] = "tuple(zip(x_modeled, y_modeled))"
             
             #tuple(zip(x_modeled, model4(x_modeled)))
 
@@ -378,7 +406,7 @@ for quadrant in [1]:
             
             
             plt.plot(xnew, model4(xnew))
-            plt.show()
+            #plt.show()
             #plt.pause(1)  
             #cv2.waitKey(3)       
             
@@ -386,15 +414,7 @@ for quadrant in [1]:
             #plt.pause(2)
             #plt.clf()
                       
-            x_0 = xnew[0]
-            x_1 = xnew[int(len(xnew)/4)]
-            x_2 = xnew[int(len(xnew)/4*2)]
-            x_3 = xnew[int(len(xnew)/4*3)] 
-            x_4 = xnew[-1]
-                      
-            slope1 = (model4(x_1) - model4(x_0))/(x_1 - x_0)
-            slope2 = (model4(x_3) - model4(x_2))/(x_3 - x_2)         
-            angle =  math.degrees(math.atan((slope2-slope1)/(1+(slope2*slope1))))         
+            
 
            
             
@@ -402,7 +422,7 @@ for quadrant in [1]:
             cv2.waitKey(5)
             
               
-            plt.close(1)
+            #plt.close(1)
             
             
                 
@@ -429,7 +449,8 @@ for quadrant in [1]:
 #df_to_analyze.rename({'tail_poly_corrected': 'tail_coords'}, axis=1, inplace=True)
 
 #df.loc[:, 'points'] = df.points.apply(lambda x: x*2)
-#df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
+df['tail_coords'] = None
+df['tail_coords'] = df["tail_poly_corrected"].apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
 #df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([(int(n*1000)) for n in sub]) for sub in x))
 
 df.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)

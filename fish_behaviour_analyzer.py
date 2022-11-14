@@ -615,7 +615,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(frame,str(fish_id[indice]) + "-" + str(fish_head_local[indice]) + "-" + str(skeleton_list[indice][1]),(position_list[indice]), font, 0.4,(0,0,0),1)
+      cv2.putText(frame,str(fish_id[indice]) + "-" + str(quadrant_local[indice]),(position_list[indice]), font, 0.4,(0,0,0),1)
       
       
     
