@@ -25,7 +25,7 @@ df["tail_poly_corrected"] = None
 df["distances"] = np.NaN
 df["tail_uniformity"] = 1.0
 df["good_tail"] = False
-
+#df["tail_coords"] = None
 
 
 
@@ -248,35 +248,50 @@ for quadrant in [3]:
 
     #df["max_row_distance"] = np.NaN
 
-    summed_distances = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].mean()/4
+    standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].max()
     #summed_distances = df["distances"].mean()/4
 
     def coord_calc(row):
-      tail_points = row["angle_corr_tail"]
-      #frame = dataf["index"]
-      #print(frame)
+      tail_points = row["angle_corr_tail"] 
+     
+      summed_distances = []
       for idx, _ in enumerate(tail_points):
         if idx > 0:
-          distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
-          if distance > summed_distances:
-            while distance > summed_distances:
-              slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
-              for i in range(idx, 5):
-                tail_points[i][0] = tail_points[i][0]-0.0001
-              tail_points[idx][1] = slope*tail_points[idx][0] + intercept           
-              distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
-          else:
-            while distance < summed_distances:
-              slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
-              for i in range(idx, 5):
-                tail_points[i][0] = tail_points[i][0]+0.0001
-              #tail_points[idx][0] = tail_points[idx][0]+0.00001
-              tail_points[idx][1] = slope*tail_points[idx][0] + intercept
-              distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])
+          distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
+          summed_distances.append(distance)
+      summed_distances = sum(summed_distances) 
+      print(summed_distances)
+      print(standart_distance)
+         
+      if summed_distances > standart_distance:
+        #print(tail_points)
+        while summed_distances > standart_distance:
+          #slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
+          for i in range(1, 5):
+            tail_points[i][0] = ((tail_points[i][0] - 1)*0.99) + 1
+            print("r1")        
+          summed_distances = []
+          for idx, _ in enumerate(tail_points):
+            if idx > 0:
+              distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
+              summed_distances.append(distance)
+          summed_distances = sum(summed_distances) 
+      else:
+        print(tail_points)
+        while summed_distances < standart_distance:
+          for i in range(1, 5):
+            tail_points[i][0] = ((tail_points[i][0] - 1)*1.01) + 1          
+          summed_distances = []
+          for idx, _ in enumerate(tail_points):
+            if idx > 0:
+              distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
+              summed_distances.append(distance)
+          summed_distances = sum(summed_distances)
+      
+      print(tail_points) 
 
       
 
-    #df = df.reset_index()
 
 
 
@@ -353,6 +368,8 @@ for quadrant in [3]:
             x_list = list(zip(*tail_coordinates))[0]
             y_list = list(zip(*tail_coordinates))[1]
             
+            print(x_list)
+            
             
             
             xnew = np.linspace(x_list[0], x_list[-1])           
@@ -363,21 +380,21 @@ for quadrant in [3]:
             print(the_row["tail_uniformity"])
             #if the_row["good_tail"].iloc[0] == True:
             plt.figure(1)
-            #plt.ylim(1.02, 0.98)
-            #plt.xlim(1, 1.08)
+            plt.ylim(0.5, 1.5)
+            plt.xlim(1, 1.30)
             #plt.xlim(1, 1.08)
         
           
             plt.plot(x_list, y_list, 'o', label='data')          
             model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-            plt.plot(xnew, model4(xnew))
+            plt.plot(x_list, y_list)
             #plt.show()
             #plt.pause(0.3)
                   
             
             plt.figure(2)
-            #plt.ylim(1.02, 0.98)
-            #plt.xlim(1, 1.08)
+            plt.ylim(0.5, 1.5)
+            plt.xlim(1, 1.30)
             #plt.xlim(0.970, 1.08)
             plt.plot(x_list, y_list, 'o', label='data')          
             #model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
@@ -387,15 +404,25 @@ for quadrant in [3]:
             
             y_modeled = tuple(model4(x_list))
             x_modeled = tuple(x_list)
+            y_modulated = [int((n*1000)) for n in y_modeled]
+            x_modulated = [int((n*1000)) for n in x_modeled]
             
+            final_tails = str(tuple(zip(y_modulated, x_modulated)))
             
+            df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_coords"] = final_tails
+
+            print(final_tails)
             #x_norm = [float(i)/x_modeled[0] for i in x_modeled]
             #y_norm = [float(i)/y_modeled[1] for i in y_modeled]
             
             #df.iloc[idx_frame, 5] = 
             
             #df.at[idx_frame, "tail_poly_corrected"] = tuple(zip(x_norm, y_norm))
-            df.loc[(df.index== idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_poly_corrected"] = "tuple(zip(x_modeled, y_modeled))"
+            
+            
+            
+            
+            #.at[idx_frame] = tuple(zip(x_modeled, y_modeled))
             
             #tuple(zip(x_modeled, model4(x_modeled)))
 
@@ -419,7 +446,7 @@ for quadrant in [3]:
            
             
             cv2.imshow('Frame', frame)
-            cv2.waitKey(5)
+            #cv2.waitKey(1)
             
               
             #plt.close(1)
@@ -449,10 +476,12 @@ for quadrant in [3]:
 #df_to_analyze.rename({'tail_poly_corrected': 'tail_coords'}, axis=1, inplace=True)
 
 #df.loc[:, 'points'] = df.points.apply(lambda x: x*2)
-df['tail_coords'] = None
-df['tail_coords'] = df["tail_poly_corrected"].apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
+#df['tail_coords'] = None
+#df['tail_coords'] = df["tail_poly_corrected"].apply(lambda x: tuple(tuple([int((n*10000)-10000) for n in sub]) for sub in x))
 #df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([(int(n*1000)) for n in sub]) for sub in x))
 
+print(df.columns)
+df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence', 'tail_uniformity', 'good_tail', 'tail_coords']]
 df.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)
 
 
