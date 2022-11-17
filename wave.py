@@ -23,7 +23,6 @@ df = pd.read_csv("C:/Users/marcio/Documents/fish_analyzer_rotated.csv").set_inde
 df["angle_corr_tail"] = None
 df["tail_poly_corrected"] = None
 df["distances"] = np.NaN
-df["tail_uniformity"] = np.NaN
 #df["good_tail"] = False
 #df["tail_coords"] = None
 
@@ -53,10 +52,10 @@ color_cycle = cycle(((0,0,255),(0,255,0),(255,0,0)))
 #frame_n = 0
 
 
-for quadrant in [1]:
-  for fish_ident in [1]:     
+for quadrant in [0,1,2,3]: # [0,1,2,3]
+  for fish_ident in [1,2]: # [1,2]    
     frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
-
+    print(frames_numbers)
     previous_id = 0
     # Read until video is completed
     for idx_frame in range(0,final_frame,1):  
@@ -299,20 +298,7 @@ for quadrant in [1]:
 
 
 
-    
-    def vari(the_list):
-      if isinstance(the_list, list):
-        y_list = list(zip(*the_list))[1]
-        cv = lambda x: np.std(x, ddof=1) / np.mean(x) * 100        
-        result = cv(y_list)
-        if result is not None:      
-          return result
-        else:
-          return np.NaN
-      else:
-        np.NaN
-        
-    df["tail_uniformity"] = df. angle_corr_tail.apply(vari)
+   
     
     #df["good_tail"] = df["tail_uniformity"].apply(lambda x: True if (x < 0.005) else False)
     #plt.hist(df["tail_uniformity"], bins = 30)
@@ -482,7 +468,7 @@ for quadrant in [1]:
 #df_to_analyze.loc[:, 'tail_coords'] = df_to_analyze.tail_coords.apply(lambda x: tuple(tuple([(int(n*1000)) for n in sub]) for sub in x))
 
 print(df.columns)
-df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence', 'tail_uniformity','tail_coords', 'take']]
+df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence','tail_coords', 'take']]
 df.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)
 
 
