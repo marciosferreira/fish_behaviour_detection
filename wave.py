@@ -30,7 +30,7 @@ df["distances"] = np.NaN
 
 
 
-plt.ion()
+#################plt.ion()
 
 
 cap = cv2.VideoCapture('C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi')
@@ -311,7 +311,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
     # Read until video is completed
     #sequences = df["sequence"].unique()
     for sequence in sequences:
-      #sequence = 110
+      #sequence = 6819
       
       sub_seq = df.loc[df["sequence"]== sequence]
       for idx_frame in sub_seq.index: 
@@ -336,7 +336,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             cv2.rectangle(frame, (the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), (the_row["center_of_mass"].iloc[0][0]+30, the_row["center_of_mass"].iloc[0][1]+30), color, 2)
             font = cv2.FONT_HERSHEY_SIMPLEX
             #cv2.putText(frame, str(the_row["fish_head"]iloc[0][0], the_row["fish_head"].iloc[0][0]-30), (the_row["fish_head"].iloc[0][1]-30, the_row["fish_head"].iloc[0][1]-30), font, 0.5, (0,0,0), 1) 
-            cv2.putText(frame, str(the_row["sequence"].iloc[0]) + " " + str(the_row["tail_uniformity"].iloc[0]),(the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), font, 0.5, (0,0,0), 1)
+            cv2.putText(frame, str(the_row["sequence"].iloc[0]),(the_row["center_of_mass"].iloc[0][0]-30,the_row["center_of_mass"].iloc[0][1]-30), font, 0.5, (0,0,0), 1)
             previous_id = the_row["sequence"].iloc[0]
             
             
@@ -364,26 +364,25 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             #f_cubic = interp1d(x_list, y_list, kind='quadratic')
             #plt.plot(xnew, f_cubic(xnew), label='quadratic')
             
-            print(the_row["tail_uniformity"])
             #if the_row["good_tail"].iloc[0] == True:
-            plt.figure(1)
+            #################plt.figure(1)
             #plt.ylim(0.5, 1.5)
             #plt.xlim(1, 2)
             #plt.xlim(1, 1.08)
         
           
-            plt.plot(x_list, y_list, 'o', label='data')          
+            ###############plt.plot(x_list, y_list, 'o', label='data')          
             model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-            plt.plot(x_list, y_list)
+            ########################plt.plot(x_list, y_list)
             #plt.show()
             #plt.pause(0.3)
                   
             
-            plt.figure(2)
+            #####################plt.figure(2)
             #plt.ylim(0.5, 1.5)
             #plt.xlim(1, 2)
             #plt.xlim(0.970, 1.08)
-            plt.plot(x_list, y_list, 'o', label='data')          
+            #################plt.plot(x_list, y_list, 'o', label='data')          
             #model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
             
             
@@ -397,8 +396,8 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             final_tails = str(tuple(zip(x_modulated, y_modulated)))
             
             df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_coords"] = final_tails
-
-            print(final_tails)
+            
+            
             #x_norm = [float(i)/x_modeled[0] for i in x_modeled]
             #y_norm = [float(i)/y_modeled[1] for i in y_modeled]
             
@@ -419,9 +418,9 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             
             
             
-            plt.plot(xnew, model4(xnew))
+            ###################plt.plot(xnew, model4(xnew))
             #plt.show()
-            plt.pause(1)  
+            ###################plt.pause(1)  
             #cv2.waitKey(3)       
             
             
@@ -432,7 +431,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
            
             
-            cv2.imshow('Frame', frame)
+            ######################cv2.imshow('Frame', frame)
             #cv2.waitKey(1)
             
               
@@ -454,7 +453,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
         continue
       #cv2.waitKey(0)
 
-    plt.clf()  
+    #################plt.clf()  
     cv2.destroyAllWindows()
 #df_to_analyze = df[["sequence", "tail_poly_corrected"]]
 #df_to_analyze["head"] = df.apply(lambda x: (x.fish_head_x, x.fish_head_y), axis=1)
