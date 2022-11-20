@@ -52,8 +52,8 @@ color_cycle = cycle(((0,0,255),(0,255,0),(255,0,0)))
 #frame_n = 0
 
 
-for quadrant in [1]: # [0,1,2,3]
-  for fish_ident in [1]: # [1,2]    
+for quadrant in [0,1,2,3]: # [0,1,2,3]
+  for fish_ident in [1,2]: # [1,2]    
     frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
     print(frames_numbers)
     previous_id = 0
@@ -306,7 +306,7 @@ for quadrant in [1]: # [0,1,2,3]
     # Read until video is completed
     #sequences = df["sequence"].unique()
     for sequence in sequences:
-      #sequence = 942
+      #sequence = 36181
       #sequence = 6819
       
       sub_seq = df.loc[df["sequence"]== sequence]
@@ -351,98 +351,72 @@ for quadrant in [1]: # [0,1,2,3]
             x_list = list(zip(*tail_coordinates))[0]
             y_list = list(zip(*tail_coordinates))[1]
             
-            print(x_list)
             
             
             
                       
               
-            #f_cubic = interp1d(x_list, y_list, kind='quadratic')
-            #plt.plot(xnew, f_cubic(xnew), label='quadratic')
-            
-            #if the_row["good_tail"].iloc[0] == True:
-            #################plt.figure(1)
-            #plt.ylim(0.5, 1.5)
-            #plt.xlim(1, 2)
-            #plt.xlim(1, 1.08)
+      
         
           
-            ###############plt.plot(x_list, y_list, 'o', label='data')          
-            model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
-            ########################plt.plot(x_list, y_list)
-            #plt.show()
-            #plt.pause(0.3)
-            #plt.figure(2)
-
-            plt.plot(xnew, model4(xnew))
-            #plt.show()
-            plt.pause(1)  
-            #cv2.waitKey(3)       
             
             
-            #plt.pause(2)
-            #plt.clf()
-                      
             
+            
+    
 
            
             
-            cv2.imshow('Frame', frame)
-            #cv2.waitKey(1)
-            
-              
-            #plt.close(1)
+            ###########cv2.imshow('Frame', frame)
+       
             
             
-            #####################plt.figure(2)
-            #plt.ylim(0.5, 1.5)
-            #plt.xlim(1, 2)
-            #plt.xlim(0.970, 1.08)
-            #################plt.plot(x_list, y_list, 'o', label='data')          
-            #model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
+     
             
             
+           
+            y_modulated = [float(i)/y_list[1] for i in y_list]
+            x_modulated = [float(i)/x_list[0] for i in x_list]
+            
+            xnew = np.linspace(x_modulated[0], x_modulated[-1])
+            
+            model4 = np.poly1d(np.polyfit(x_modulated, y_modulated, 3))
+            
+            y_modeled = tuple(model4(x_modulated))
+            x_modeled = tuple(x_modulated)
+            
+    
+            
+            ###########plt.figure(2)            
+            ############plt.plot(xnew, model4(xnew))
+
+
+
+            
+            final_tails = str(tuple(zip(x_modulated, y_modulated)))
             
             df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_coords"] = final_tails
             
-            
-            #x_norm = [float(i)/x_modeled[0] for i in x_modeled]
-            #y_norm = [float(i)/y_modeled[1] for i in y_modeled]
-            
-            #df.iloc[idx_frame, 5] = 
-            
-            #df.at[idx_frame, "tail_poly_corrected"] = tuple(zip(x_norm, y_norm))
-            
-            
-            
-            
-            #.at[idx_frame] = tuple(zip(x_modeled, y_modeled))
-            
-            #tuple(zip(x_modeled, model4(x_modeled)))
+           
 
             
             
             
             
             
-            ###################plt.plot(xnew, model4(xnew))
-            #plt.show()
-            ###################plt.pause(1)  
-            #cv2.waitKey(3)       
+          
+            #############plt.pause(1)  
             
-            
-            #plt.pause(2)
-            #plt.clf()
+   
                       
             
 
            
             
-            ######################cv2.imshow('Frame', frame)
-            #cv2.waitKey(1)
+            ###############cv2.imshow('Frame', frame)
+            
             
               
-            #plt.close(1)
             
             
                 
@@ -460,7 +434,7 @@ for quadrant in [1]: # [0,1,2,3]
         continue
       #cv2.waitKey(0)
 
-    #################plt.clf()  
+    plt.clf()  
     cv2.destroyAllWindows()
 #df_to_analyze = df[["sequence", "tail_poly_corrected"]]
 #df_to_analyze["head"] = df.apply(lambda x: (x.fish_head_x, x.fish_head_y), axis=1)
