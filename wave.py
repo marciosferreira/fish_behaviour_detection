@@ -281,6 +281,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
           summed_distances = sum(summed_distances)
     
       for i in range(0, len(tail_points)):
+        pass
         tail_points[i][0] = tail_points[i][0]/summed_distances
         tail_points[i][1] = tail_points[i][1]/summed_distances     
      
