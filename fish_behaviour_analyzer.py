@@ -178,11 +178,13 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       max_area = (frame.shape[0] * frame.shape[1])/4
       min_area = max_area * 0.5
       quadrants_lines = []
+      quadrant_values = []
       for c in cnts:
           area = cv2.contourArea(c)          
           if area > min_area and area < max_area:
               x,y,w,h = cv2.boundingRect(c)
               quadrants_lines.append((x,y,w,h))
+              
                            
       if len(quadrants_lines) != 4:
         print("Number od detected quadrants is not 4")
@@ -319,7 +321,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         #the head coordinates
         aver_head = (aver_head[0][0], aver_head[0][1])
         
-        
+        lenght_of_fish = math.sqrt( (aver_head[0] - tail_coords[0])  **2 + (aver_head[1] - tail_coords[1])**2 )
         
         
         #squeleton continuity       
@@ -394,7 +396,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
         #store variables locally in the loop for immediate calculation purposes
         idx_local.append(counter)          
-        lenght_of_fish_local.append(fish_pectoral_lenght)
+        lenght_of_fish_local.append(lenght_of_fish)
         position_fish_local.append(fish_COM)
         fish_tail_local.append(tail_coords)
         fish_head_local.append(aver_head)
@@ -422,7 +424,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe["fish_id"] = None
     dframe["tail_points"] = skeleton_list
     dframe["quad_coord"] = quad_coord
-
+    print('test')
    
    
      ########################################################################################################

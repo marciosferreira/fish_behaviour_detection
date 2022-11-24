@@ -52,8 +52,8 @@ color_cycle = cycle(((0,0,255),(0,255,0),(255,0,0)))
 #frame_n = 0
 
 
-for quadrant in [0,1,2,3]: # [0,1,2,3]
-  for fish_ident in [1,2]: # [1,2]    
+for quadrant in [2]: # [0,1,2,3]
+  for fish_ident in [2]: # [1,2]    
     frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
     print(frames_numbers)
     previous_id = 0
@@ -168,8 +168,8 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
                 
                 
                 
-                x_norm_2 = [float(i)/x_norm[0] for i in x_norm]
-                y_norm_2 = [float(i)/y_norm[1] for i in y_norm]
+                x_norm_2 = [float(i) - x_norm[0] for i in x_norm]
+                y_norm_2 = [float(i) - y_norm[1] for i in y_norm]
                 
                 
                 
@@ -225,8 +225,8 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
     
 
     def distances(t):
-      x_tuple = tuple(zip(*t))[0]
-      y_tuple = tuple(zip(*t))[1]
+      #x_tuple = tuple(zip(*t))[0]
+      #y_tuple = tuple(zip(*t))[1]
       distances = []
       for idx, _ in enumerate(t):
         if idx > 0:
@@ -246,7 +246,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
     #df["max_row_distance"] = np.NaN
 
-    standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].max()
+    standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].mean()
 
 
     def coord_calc(row):
@@ -262,7 +262,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
         while summed_distances > standart_distance:
           #slope, intercept, r, p, std_err = stats.linregress([tail_points[idx][0], tail_points[idx-1][0]], [tail_points[idx][1], tail_points[idx-1][1]])
           for i in range(1, 5):
-            tail_points[i][0] = ((tail_points[i][0] - 1)*0.99) + 1
+            tail_points[i][0] = ((tail_points[i][0])*0.99) 
           summed_distances = []
           for idx, _ in enumerate(tail_points):
             if idx > 0:
@@ -272,19 +272,15 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
       else:
         while summed_distances < standart_distance:
           for i in range(1, 5):
-            tail_points[i][0] = ((tail_points[i][0] - 1)*1.01) + 1          
+            tail_points[i][0] = ((tail_points[i][0])*1.01)           
           summed_distances = []
           for idx, _ in enumerate(tail_points):
             if idx > 0:
               distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
               summed_distances.append(distance)
           summed_distances = sum(summed_distances)
-    
-      for i in range(0, len(tail_points)):
-        pass
-        tail_points[i][0] = tail_points[i][0]/summed_distances
-        tail_points[i][1] = tail_points[i][1]/summed_distances     
-     
+      print(summed_distances)
+      pass
   
 
       
@@ -368,7 +364,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
            
             
-            ###########cv2.imshow('Frame', frame)
+            cv2.imshow('Frame', frame) ##########################
        
             
             
@@ -376,25 +372,25 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             
             
            
-            y_modulated = [float(i)/y_list[1] for i in y_list]
-            x_modulated = [float(i)/x_list[0] for i in x_list]
+            #y_modulated = [float(i)/y_list[1] for i in y_list]
+            #x_modulated = [float(i)/x_list[0] for i in x_list]
             
-            xnew = np.linspace(x_modulated[0], x_modulated[-1])
+            xnew = np.linspace(x_list[0], x_list[-1])
             
-            model4 = np.poly1d(np.polyfit(x_modulated, y_modulated, 3))
+            model4 = np.poly1d(np.polyfit(x_list, y_list, 3))
             
-            y_modeled = tuple(model4(x_modulated))
-            x_modeled = tuple(x_modulated)
+            y_modeled = tuple(model4(x_list))
+            x_modeled = tuple(x_list)
             
     
             
-            ###########plt.figure(2)            
-            ############plt.plot(xnew, model4(xnew))
-
+            plt.figure(2)       ####################      
+            plt.plot(xnew, model4(xnew)) ####################
+            #plt.plot(x_list, y_list) 
 
 
             
-            final_tails = str(tuple(zip(x_modulated, y_modulated)))
+            final_tails = str(tuple(zip(x_modeled, y_modeled)))
             
             df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), "tail_coords"] = final_tails
             
@@ -406,7 +402,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             
             
           
-            #############plt.pause(1)  
+            plt.pause(1)   #####################
             
    
                       
@@ -414,7 +410,6 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
            
             
-            ###############cv2.imshow('Frame', frame)
             
             
               
