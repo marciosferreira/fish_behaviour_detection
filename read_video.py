@@ -2,6 +2,13 @@
 import cv2
 import numpy as np
 
+
+import sys
+
+print('cmd entry:', sys.argv)
+
+
+
 # Create a VideoCapture object and read from input file
 cap = cv2.VideoCapture('C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi')
 
@@ -19,8 +26,7 @@ while(cap.isOpened()):
     # Display the resulting frame
         cv2.imshow('Frame', frame)
         print(frame_n)
-        print("shape")
-        print(frame.shape)
+        
         frame_n +=1
   
         

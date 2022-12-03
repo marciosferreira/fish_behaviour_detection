@@ -1,20 +1,32 @@
 #Setup paramters
 #quadr = (0,1,2,3)     
 # 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
-import sys
-print('path_to_video: ', sys.argv[1])
-print('save_results_on: ', sys.argv[2])
-print('initial_frame: ', sys.argv[3])
-print('final_frame: ', sys.argv[4])
 
+#import sys
 
+#sys.argv[1] = "Ians_videos/all_to_analyse/20191111_1527_5-1_L_A.avi"
+#sys.argv[2] = "Ians_videos/"
+#sys.argv[3] = "1201"
+#sys.argv[4] = "19000"
+
+#import sys
+#print('path_to_video: ', sys.argv[1])
+#print('save_results_on: ', sys.argv[2])
+#print('initial_frame: ', sys.argv[3])
+#print('final_frame: ', sys.argv[4])
+
+from IPython.display import clear_output
 
 #cap = cv2.VideoCapture(sys.argv[1])
-initial_frame = int(sys.argv[3]) #1201  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
-final_frame = int(sys.argv[4]) #19000  # set a very big number to go until the end of the video. e.g: 1000000
-path_to_video = sys.argv[1] #'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
+#initial_frame = int(sys.argv[3]) #1201  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
+#final_frame = int(sys.argv[4]) #19000  # set a very big number to go until the end of the video. e.g: 1000000
+#path_to_video = sys.argv[1] #'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 #background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
-path_to_save = sys.argv[2] #"C:/Users/marcio/Documents/results_Ian"  #where to save results
+#path_to_save = sys.argv[2] #"C:/Users/marcio/Documents/results_Ian"  #where to save results
+path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/croped_20191112_0948_4-2_L_A.avi"
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/results/"
+initial_frame = 2047+100
+final_frame = None
 
 #####################################################################################
 
@@ -55,15 +67,45 @@ import pandas as pd
 #from PIL import Image     
 #import time
 #update_counter = 23
-#import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt 
 #import imutils
 from skimage.morphology import skeletonize, thin
 
 
 
+def crop_img(img):
+  gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+
+    # invert gray image
+  gray = 255 - gray
+
+    # gaussian blur
+  blur = cv2.GaussianBlur(gray, (3,3), 0)
+
+    # threshold
+  thresh = cv2.threshold(blur,236,255,cv2.THRESH_BINARY)[1]
+
+    # apply close and open morphology to fill tiny black and white holes
+  kernel = np.ones((5,5), np.uint8)
+  thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+  thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+
+    # invert thresh
+  thresh = 255 -thresh
+
+    # get contours (presumably just one around the nonzero pixels) 
+    # then crop it to bounding rectangle
+  contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+  contours = contours[0] if len(contours) == 2 else contours[1]
+  cntr = contours[0]
+  x,y,w,h = cv2.boundingRect(cntr)
+  return img[y:y+h, x:x+w]
+
+
 
 # Check if camera opened successfully
 cap = cv2.VideoCapture(path_to_video)
+
 
 if final_frame == None:
   final_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -75,6 +117,17 @@ for idx_frame in range(initial_frame,final_frame,step):
   cap.set(1, idx_frame)  
   # Capture frame-by-frame
   ret, frame = cap.read()
+
+  frame = crop_img(frame)    # crop black borders
+  
+
+
+
+
+
+
+
+
   if ret == True:   
     background_frame.append(frame)
     
@@ -83,7 +136,7 @@ result = np.median(background_frame,axis=0)
 dynamic_background = result.astype(np.uint8)
 #dynamic_background = result.mode[0]
 
-cv2.imshow('dyn',dynamic_background)
+#cv2.imshow('dyn',dynamic_background)
 
 
 
@@ -125,6 +178,16 @@ bw_back = cv2.bilateralFilter(dynamic_background,9,75,75)
 
 bw_back = cv2.cvtColor(bw_back, cv2.COLOR_BGR2GRAY)
 #bw_back = cv2.GaussianBlur(bw_back, (9,9) ,0)
+#the_plot = result = bw_back.flatten()
+#plt.hist(the_plot, bins="auto") 
+#plt.show()
+
+the_median = np.median(bw_back)    
+bw_back[bw_back < 160] = the_median    
+bw_back = cv2.fastNlMeansDenoising(bw_back, None, 10.0, 15, 29)
+
+#the_median = int(np.median(bw_back))
+#bw_back[bw_back < 256] = the_median
 
 #create a blank image to plot everything on
 blank_image = np.zeros((bw_back.shape[0], bw_back.shape[1], 3), np.uint8)
@@ -137,7 +200,7 @@ previous_id_fish_local = []
 histograms_ids = {'10':deque(maxlen=60), '11':deque(maxlen=60), '12':deque(maxlen=60), '13':deque(maxlen=60), '20':deque(maxlen=60), '21':deque(maxlen=60), '22':deque(maxlen=60), '23':deque(maxlen=60)}
 histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxlen=60), "X3":deque(maxlen=60), "Y0":deque(maxlen=60), "Y1":deque(maxlen=60), "Y2":deque(maxlen=60), "Y3":deque(maxlen=60)}
 
-#cv2.imshow('background' , bw_back)
+cv2.imshow('background' , bw_back)
 
 
 
@@ -146,23 +209,30 @@ if (cap.isOpened()== False):
   print("Error opening video stream or file")
 
 
-
    
 # Read until video is completed
 for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
-  print(idx_frame)
+  #print(idx_frame)
     
   
   cap.set(1, idx_frame)
   
   # Capture frame-by-frame
   ret, frame = cap.read()
+  frame = crop_img(frame)
   if ret == True:
+      #frame_t = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+      #plt.imshow(frame_t)        
+      #plt.gcf().set_size_inches(13, 12)
+      #plt.title(idx_frame)
+      #plt.gcf().set_size_inches(23, 22)
+      #plt.show()    
+        
     
     #########################################################################
     #detec quadrantes on first image
     # Load image, grayscale, median blur, sharpen image
-    if idx_frame == initial_frame:
+    
       #image = cv2.imread('1.pn)
       gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)    
       blur = cv2.medianBlur(gray, 9)
@@ -170,8 +240,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       #sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
       #blur = cv2.bilateralFilter(gray,9,75,75)
       # Threshold and morph close
-      
-      thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+
+      thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
             cv2.THRESH_BINARY,11,2)
       kernel = np.ones((15,15),np.uint8)
       opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
@@ -193,13 +263,69 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           if area > min_area and area < max_area:
               x,y,w,h = cv2.boundingRect(c)
               quadrants_lines.append((x,y,w,h))
-              
-                           
+
+
       if len(quadrants_lines) != 4:
-        print("Number od detected quadrants is not 4")
-        quit()          
-    ###########################################################
+        print("Number od detected quadrants is not 4")        
+
+      else:
+        
+        print("4 quadrants found")
+        break
+
+        #quit()          
+
+for idx, coordinates in enumerate(quadrants_lines):
+      x,y,w,h = coordinates
+      cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
+      font = cv2.FONT_HERSHEY_SIMPLEX
+      cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
+
+#frame_t = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#plt.imshow(frame_t)        
+#plt.gcf().set_size_inches(13, 12)
+#plt.title(idx_frame)
+#plt.gcf().set_size_inches(23, 22)
+#plt.show()    
     
+    #cv2.imshow('Main',frame)  ####### here    
+
+#clear_output(wait=True)
+
+
+
+               
+for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
+  print(idx_frame)
+    
+  
+  cap.set(1, idx_frame)
+  
+  # Capture frame-by-frame
+  ret, frame = cap.read()
+
+  frame = crop_img(frame)
+  if ret == True:
+      cv2.imshow('Main',frame)
+      cv2.waitKey(1)  
+      
+      
+      
+      
+      
+        
+        ###########################################################
+for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000 
+  print(idx_frame)
+    
+  
+  cap.set(1, idx_frame)
+  
+  # Capture frame-by-frame
+  ret, frame = cap.read()
+
+  frame = crop_img(frame)
+  if ret == True:    
     first_fish = []
     second_fish = []
     
@@ -226,11 +352,39 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     bw_mainImage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
     #cv2.imshow("sharpened", bw_mainImage)
-
-    diff = cv2.absdiff(bw_back, bw_mainImage)
-          
-    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY)  
     
+    #an_array = np.full(bw_mainImage.shape, 255, dtype=np.uint8)
+    #back_inv = an_array - bw_back
+    
+    cv2.imshow("bw_back", bw_back)
+    
+    #cv2.imwrite('C:/Users/marcio/Pictures/background/back_gd.jpg', bw_back)
+
+    bw_mainImage = bw_mainImage.astype(float)
+    
+     
+
+    
+    diff = bw_mainImage - bw_back #cv2.absdiff(bw_back, bw_mainImage)
+    diff[diff > 0] = 0
+    diff = np.absolute(diff)
+    diff = diff.astype(np.uint8)
+
+    #plt.imshow(diff)        
+    #plt.gcf().set_size_inches(13, 12)
+    #plt.title(idx_frame)
+    #plt.show()
+    
+ 
+    
+    
+    cv2.imshow("diff", diff)
+  
+          
+    ret,thresh = cv2.threshold(diff,8,255,cv2.THRESH_BINARY) #15
+    
+    
+    cv2.imshow("thress", thresh)
 
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     
@@ -258,10 +412,10 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     for idx, cnt in enumerate(contours):
                   
       area = cv2.contourArea(cnt) 
-      
       #calculate aspect ratio for template quality filtering   
 
-      if area > 200 and area < 1500:
+      if area > 100 and area < 1000:
+         
         
         #will be used for squeleton
         drawn_image_for_skeleton = blank_image.copy()
@@ -389,18 +543,20 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
         
         ######print quad
-        
-        if (fish_COM[0] < (quadrants_lines[0][0] + quadrants_lines[0][2] + 10) and (fish_COM[1] > (quadrants_lines[0][1] -10))):  
+        hor_line = frame.shape[0]/2
+        ver_line = frame.shape[1]/2
+        if (fish_COM[0] < ver_line)  and (fish_COM[1] > hor_line):  
           quadrant_value = 0
-        elif (fish_COM[0] > (quadrants_lines[1][0] -10) and fish_COM[1] > ((quadrants_lines[1][1] -10))):
+        elif (fish_COM[0] > (hor_line) and fish_COM[1] > (ver_line)):
           quadrant_value = 1
-        elif (fish_COM[0] > (quadrants_lines[2][0] -10) and fish_COM[1] < ((quadrants_lines[2][1] + quadrants_lines[2][3] +10))):
+        elif (fish_COM[0] > (ver_line) and fish_COM[1] < (hor_line)):
           quadrant_value = 2
-        elif (fish_COM[0] < (quadrants_lines[3][0] + quadrants_lines[3][2] +10) and fish_COM[1] < (quadrants_lines[3][1] + quadrants_lines[3][3] +10)):
+        elif (fish_COM[0] < (ver_line) and fish_COM[1] < (hor_line)):
           quadrant_value = 3
         else:
           print("error!!!!!!!!!!!")
-          quit()           
+          quit()
+          #quadrant_value = 0
       
 
         #store variables locally in the loop for immediate calculation purposes
@@ -433,7 +589,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe["fish_id"] = None
     dframe["tail_points"] = skeleton_list
     dframe["quad_coord"] = quad_coord
-    print('test')
+    #print('test')
    
    
      ########################################################################################################
@@ -626,9 +782,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     font = cv2.FONT_HERSHEY_SIMPLEX
     for indice, value in enumerate(fish_id):
      
-      cv2.putText(frame,str(fish_id[indice]) + "-" + str(quadrant_local[indice]),(position_list[indice]), font, 0.4,(0,0,0),1)
       
-      
+      cv2.putText(frame, 'id: ' + str(fish_id[indice]) + " - " + 'qu: ' + str(quadrant_local[indice]),(position_list[indice]), font, 0.4,(0,0,0),1)
+     
     
       
     
@@ -647,7 +803,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       x,y,w,h = coordinates
       cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
       font = cv2.FONT_HERSHEY_SIMPLEX
-      cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
+      #cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
 
    
     
@@ -661,7 +817,16 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
    
 
-    cv2.imshow('Main',frame)
+    cv2.imshow('Main',frame)  ####### here    
+    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #plt.imshow(frame)        
+    #plt.gcf().set_size_inches(13, 12)
+    #plt.title(idx_frame)
+    #plt.show()
+    #clear_output(wait=True)
+    
+    
+    
     
     previous_df = dframe.copy()  
     
