@@ -1,7 +1,7 @@
 #Setup paramters
 #quadr = (0,1,2,3)     
 # 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
-
+debug = True
 #import sys
 
 #sys.argv[1] = "Ians_videos/all_to_analyse/20191111_1527_5-1_L_A.avi"
@@ -16,6 +16,10 @@
 #print('final_frame: ', sys.argv[4])
 
 from IPython.display import clear_output
+import pandas as pd
+import winsound
+
+
 
 #cap = cv2.VideoCapture(sys.argv[1])
 #initial_frame = int(sys.argv[3]) #1201  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
@@ -23,11 +27,14 @@ from IPython.display import clear_output
 #path_to_video = sys.argv[1] #'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 #background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
 #path_to_save = sys.argv[2] #"C:/Users/marcio/Documents/results_Ian"  #where to save results
-path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/croped_20191112_0948_4-2_L_A.avi"
+expe = "croped_20191113_0941_69-2_L_A" + ".avi"
+path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/" + expe
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/results/"
-initial_frame = 2047+100
-final_frame = None
 
+final_frame = None
+df_meta = pd.read_csv('C:/Users/marcio/Downloads/MIKK_F0_metadata.csv')
+
+initial_frame = df_meta.loc[df_meta["sample"] == expe[7:-4]]["of_start"].iloc[0] + 200
 #####################################################################################
 
 import os
@@ -62,7 +69,6 @@ import scipy.stats
 #from cv2 import waitKey 
 import numpy as np
 import math
-import pandas as pd
 #import imagehash
 #from PIL import Image     
 #import time
@@ -183,8 +189,46 @@ bw_back = cv2.cvtColor(bw_back, cv2.COLOR_BGR2GRAY)
 #plt.show()
 
 the_median = np.median(bw_back)    
-bw_back[bw_back < 160] = the_median    
-bw_back = cv2.fastNlMeansDenoising(bw_back, None, 10.0, 15, 29)
+bw_back[bw_back < the_median -40] = 0
+
+
+ 
+
+ret, mask_fillin = cv2.threshold(bw_back,0,255,cv2.THRESH_BINARY_INV)
+
+kernel = np.ones((5, 5), np.uint8)
+mask_fillin = cv2.dilate(mask_fillin, kernel, iterations=3)
+
+
+#cv2.imshow("mask_fillin", mask_fillin)
+
+bw_back = cv2.inpaint(bw_back, mask_fillin, 10, cv2.INPAINT_TELEA)
+
+
+
+#cv2.imshow("paint", bw_back)
+
+
+
+
+
+
+
+   
+#bw_back = cv2.fastNlMeansDenoising(bw_back, None, 15.0, 15, 29)
+
+############################
+
+
+#avging = cv2.blur(bw_back,(100,100))
+   
+
+#bw_back[bw_back<50] = avging[bw_back<50]
+
+if debug==True:
+  cv2.imshow("imm_res", bw_back )
+
+
 
 #the_median = int(np.median(bw_back))
 #bw_back[bw_back < 256] = the_median
@@ -200,7 +244,8 @@ previous_id_fish_local = []
 histograms_ids = {'10':deque(maxlen=60), '11':deque(maxlen=60), '12':deque(maxlen=60), '13':deque(maxlen=60), '20':deque(maxlen=60), '21':deque(maxlen=60), '22':deque(maxlen=60), '23':deque(maxlen=60)}
 histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxlen=60), "X3":deque(maxlen=60), "Y0":deque(maxlen=60), "Y1":deque(maxlen=60), "Y2":deque(maxlen=60), "Y3":deque(maxlen=60)}
 
-cv2.imshow('background' , bw_back)
+if debug==True:
+  cv2.imshow('bw_back' , bw_back)
 
 
 
@@ -356,9 +401,15 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     #an_array = np.full(bw_mainImage.shape, 255, dtype=np.uint8)
     #back_inv = an_array - bw_back
     
-    cv2.imshow("bw_back", bw_back)
+    if debug==True:
+      cv2.imshow("bw_back", bw_back)
     
     #cv2.imwrite('C:/Users/marcio/Pictures/background/back_gd.jpg', bw_back)
+
+    
+    #bw_mainImage = cv2.fastNlMeansDenoising(bw_mainImage, None, 3.0, 7, 21)
+    
+    #cv2.imshow("bw_mainImagexxx", bw_mainImage)
 
     bw_mainImage = bw_mainImage.astype(float)
     
@@ -378,13 +429,17 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
  
     
     
-    cv2.imshow("diff", diff)
+    if debug==True:
+      cv2.imshow("diff", diff)
   
           
-    ret,thresh = cv2.threshold(diff,8,255,cv2.THRESH_BINARY) #15
+    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY) #15
     
-    
-    cv2.imshow("thress", thresh)
+    kernel = np.ones((5,5),np.uint8)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)   #eita
+
+    if debug==True:
+      cv2.imshow("thress", thresh)
 
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     
@@ -414,7 +469,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       area = cv2.contourArea(cnt) 
       #calculate aspect ratio for template quality filtering   
 
-      if area > 100 and area < 1000:
+      if area > 150 and area < 1000:
          
         
         #will be used for squeleton
@@ -707,7 +762,12 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           dframe.loc[(dframe.fish_id == previous_fish_1_id) & (dframe.quadrant_local == row_q), "fish_id"] = 1
           histograms_ids['2' + str(row_q)] = histograms_X_Y[str(previous_fish_2_id) + str(row_q)]          
           dframe.loc[(dframe.fish_id == previous_fish_2_id) & (dframe.quadrant_local == row_q), "fish_id"] = 2          
-        print("time to decide")    
+        print("time to decide")
+        # frequency is set to 500Hz
+        freq = 500        
+        # duration is set to 100 milliseconds            
+        dur = 1000                      
+        winsound.Beep(freq, dur)    
       #############################################################################################################      
         # now we actually are going to decide which fish is which by statistcs          
         cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
@@ -788,11 +848,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
       
     
-    for c in idx_local[:8]:
-      for coords in skeleton_list[c]:      
-      #tail plot
-      #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
-        cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
+    #for c in idx_local[:8]:
+      #for coords in skeleton_list[c]:      
+        #cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
         
     
 

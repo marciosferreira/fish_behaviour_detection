@@ -1,48 +1,16 @@
-# importing libraries
-import cv2
-import numpy as np
-
-
-import sys
-
-print('cmd entry:', sys.argv)
-
-
-
-# Create a VideoCapture object and read from input file
-cap = cv2.VideoCapture('C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi')
-
-# Check if camera opened successfully
-if (cap.isOpened()== False):
-    print("Error opening video file")
-
-frame_n = 1
-# Read until video is completed
-while(cap.isOpened()):
-    
-# Capture frame-by-frame
-    ret, frame = cap.read()
-    if ret == True:
-    # Display the resulting frame
-        cv2.imshow('Frame', frame)
-        print(frame_n)
-        
-        frame_n +=1
-  
-        
-        
-        
-    # Press Q on keyboard to exit
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
-
-# Break the loop
-    else:
-        break
-
-# When everything done, release
-# the video capture object
-cap.release()
-
-# Closes all the frames
-cv2.destroyAllWindows()
+rows =3
+columns= 2
+for j in range(columns):
+    for i in range(rows):
+        if img[i][j] == 0:
+            if img[i][j+1] == 0:
+                if img[i+1][j] == 0:
+                    continue
+                else:
+                    img[i][j] = img[i+1][j]:
+                    
+            else:
+                img[i][j] == img[i][j+1]:
+        else:
+            continue        
+          
