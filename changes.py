@@ -2,6 +2,7 @@
 #quadr = (0,1,2,3)     
 # 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
 debug = True
+trait_to_analyze = "color" # ["color", "length"]
 #import sys
 
 #sys.argv[1] = "Ians_videos/all_to_analyse/20191111_1527_5-1_L_A.avi"
@@ -27,7 +28,7 @@ import winsound
 #path_to_video = sys.argv[1] #'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
 #background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
 #path_to_save = sys.argv[2] #"C:/Users/marcio/Documents/results_Ian"  #where to save results
-expe = "croped_20191113_0941_69-2_L_A" + ".avi"
+expe = "croped_20191113_1557_22-1_L_A" + ".avi"
 path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/" + expe
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/results/"
 
@@ -351,8 +352,9 @@ for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
 
   frame = crop_img(frame)
   if ret == True:
-      cv2.imshow('Main',frame)
-      cv2.waitKey(1)  
+      if debug==True:
+        cv2.imshow('Main',frame)
+        cv2.waitKey(1)  
       
       
       
@@ -461,6 +463,14 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     template_dark = []
     skeleton_list = []
     quad_coord = []
+    list_sum_chanel_B = []
+    list_sum_chanel_G = []
+    list_sum_chanel_R = []
+    list_avg_chanel_B = [] 
+    list_avg_chanel_G = []
+    list_avg_chanel_R = []
+    list_count_chanel = []
+    list_red_i = []
 
     counter = 0
     
@@ -470,7 +480,62 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       #calculate aspect ratio for template quality filtering   
 
       if area > 150 and area < 1000:
-         
+        
+        mask = np.zeros(frame.shape, dtype=np.uint8)
+        mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
+        croped_fish = cv2.bitwise_and(frame, mask)
+        #cv2.imshow('croped', croped_fish)
+        test_hist = croped_fish.copy()
+        croped_fish = croped_fish.astype('float')
+        croped_fish[croped_fish == 0] = np.nan
+        
+        #cv2.imshow('hist', result1)
+        sum_chanel_B = np.nansum(croped_fish[:,:,0]) 
+        sum_chanel_G = np.nansum(croped_fish[:,:,1]) 
+        sum_chanel_R = np.nansum(croped_fish[:,:,2]) 
+        avg_chanel_B = np.nanmean(croped_fish[:,:,0]) 
+        avg_chanel_G = np.nanmean(croped_fish[:,:,1]) 
+        avg_chanel_R = np.nanmean(croped_fish[:,:,2])
+        count_chanel = np.count_nonzero(~np.isnan(croped_fish[:,:,0]))
+        red_i = (sum_chanel_R/sum_chanel_B)
+        #plt.hist(croped_fish[:,:,0])
+        #plt.show()
+        
+        
+        ###############################
+        """img = cv2.cvtColor(test_hist, cv2.COLOR_BGR2RGB)
+    
+
+        red_hist = cv2.calcHist([img], [0], None, [255], [1, 255])
+        green_hist = cv2.calcHist([img], [1], None, [255], [1, 255])
+        blue_hist = cv2.calcHist([img], [2], None, [255], [1, 255])
+      
+        plt.subplot(4, 1, 1)
+        plt.imshow(img)
+        plt.title('image')
+        plt.xticks([])
+        plt.yticks([])
+
+        plt.subplot(4, 1, 2)
+        plt.plot(red_hist, color='r')
+        plt.xlim([0, 255])
+        plt.title('red histogram')
+
+        plt.subplot(4, 1, 3)
+        plt.plot(green_hist, color='g')
+        plt.xlim([0, 255])
+        plt.title('green histogram')
+
+        plt.subplot(4, 1, 4)
+        plt.plot(blue_hist, color='b')
+        plt.xlim([0, 255])
+        plt.title('blue histogram')
+
+        plt.tight_layout()
+        plt.show()"""
+
+##########   
+        
         
         #will be used for squeleton
         drawn_image_for_skeleton = blank_image.copy()
@@ -622,14 +687,28 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         fish_head_local.append(aver_head)
         quadrant_local.append(quadrant_value)
         fish_area.append(area)        
-        histograms.append(fish_pectoral_lenght)   # need to fix afterwards
         countours_idx.append(0)
         template_area.append(area_rec)
         template_blur.append(0)
         template_dark.append(0)
         skeleton_list.append(tail_points_filtered) 
-        quad_coord.append(quadrants_lines[quadrant_value])      
-                      
+        quad_coord.append(quadrants_lines[quadrant_value])
+        list_sum_chanel_B.append(sum_chanel_B)
+        list_sum_chanel_G.append(sum_chanel_G)
+        list_sum_chanel_R.append(sum_chanel_R)
+        list_avg_chanel_B.append(avg_chanel_B)
+        list_avg_chanel_G.append(avg_chanel_G)
+        list_avg_chanel_R.append(avg_chanel_R)
+        list_count_chanel.append(count_chanel)      
+        list_red_i.append(red_i)
+        if trait_to_analyze == "length":
+          histograms.append(fish_pectoral_lenght)
+        elif trait_to_analyze == "color":
+          histograms.append(red_i)
+        else:
+          print("need specify the trait to compare")
+          quit()
+                        
         counter +=1
     
     
@@ -643,7 +722,15 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     dframe['cnt_idx'] = countours_idx
     dframe["fish_id"] = None
     dframe["tail_points"] = skeleton_list
-    dframe["quad_coord"] = quad_coord
+    dframe["quad_coord"] = quad_coord    
+    dframe["sum_chanel_B"] = list_sum_chanel_B  
+    dframe['sum_chanel_G'] = list_sum_chanel_G
+    dframe['sum_chanel_R'] = list_sum_chanel_R
+    dframe["avg_chanel_B"] = list_avg_chanel_B
+    dframe["avg_chanel_G"] = list_avg_chanel_G
+    dframe["avg_chanel_R"] = list_avg_chanel_R
+    dframe["count_chanel"] = list_count_chanel
+    dframe["red_i"] = list_red_i   
     #print('test')
    
    
@@ -867,7 +954,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
     #select fields to write to csv
     filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1) | (dframe['fish_id'] == 2)]
-    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id', 'tail_points', 'quad_coord']]
+    filt_s_dataf = filt_dframe[['lenght_of_fish_local', 'position_fish_local', 'fish_tail_local', 'fish_head_local', 'quadrant_local', 'fish_area', 'fish_id', 'tail_points', 'quad_coord', "sum_chanel_B", "sum_chanel_G", 'sum_chanel_R', "avg_chanel_B", "avg_chanel_G", "avg_chanel_R", "count_chanel"]]
     filt_s_dataf.insert(loc=0,
           column='frame_number',
           value=idx_frame)
@@ -875,7 +962,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
    
 
-    cv2.imshow('Main',frame)  ####### here    
+    if debug==True:
+      cv2.imshow('Main',frame)  ####### here    
     #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     #plt.imshow(frame)        
     #plt.gcf().set_size_inches(13, 12)
@@ -889,7 +977,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     previous_df = dframe.copy()  
     
     
-    if cv2.waitKey(25) & 0xFF == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
       break
 
   # Break the loop
