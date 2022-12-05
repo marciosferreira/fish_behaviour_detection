@@ -1,81 +1,52 @@
-#Setup paramters
-#quadr = (0,1,2,3)     
-# 0 for left down, 1 for right down, 2 for right up, 3 for left up. 
+#usage:
+# python script.py [path to video with filename] [path to save without file name] [path to metadata with filename]
+
 debug = True
 trait_to_analyze = "color" # ["color", "length"]
-#import sys
 
-#sys.argv[1] = "Ians_videos/all_to_analyse/20191111_1527_5-1_L_A.avi"
-#sys.argv[2] = "Ians_videos/"
-#sys.argv[3] = "1201"
-#sys.argv[4] = "19000"
+import sys
 
-#import sys
 #print('path_to_video: ', sys.argv[1])
 #print('save_results_on: ', sys.argv[2])
-#print('initial_frame: ', sys.argv[3])
-#print('final_frame: ', sys.argv[4])
-
+#print("path_to_metadata: ", sys.argv[3])
 from IPython.display import clear_output
 import pandas as pd
-import winsound
+if debug==True:
+  import winsound
 
-
-
-#cap = cv2.VideoCapture(sys.argv[1])
-#initial_frame = int(sys.argv[3]) #1201  # will throw an error if not 2 fish are in each quadrant in the first frame (if any fish are overlapped).
-#final_frame = int(sys.argv[4]) #19000  # set a very big number to go until the end of the video. e.g: 1000000
-#path_to_video = sys.argv[1] #'C:/Users/marcio/Videos/Ian_videos/20191121_1454_iCab_L_C.avi'  # video path
-#background_img = 'C:/Users/marcio/Documents/background_1.jpg' #background image
-#path_to_save = sys.argv[2] #"C:/Users/marcio/Documents/results_Ian"  #where to save results
-expe = "croped_20191113_1557_22-1_L_A" + ".avi"
-path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/" + expe
-path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/results/"
-
-final_frame = None
-df_meta = pd.read_csv('C:/Users/marcio/Downloads/MIKK_F0_metadata.csv')
-
-initial_frame = df_meta.loc[df_meta["sample"] == expe[7:-4]]["of_start"].iloc[0] + 200
-#####################################################################################
-
+path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191115_1615_11-1_R_B.avi" #sys.argv[1]
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
+path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
 import pathlib
 
 final_path = pathlib.PurePath(path_to_video)
-file_name = final_path.name
+expe = final_path.name
 
-if os.path.exists(path_to_save + "/" + file_name + '.csv'):
-  os.remove(path_to_save + "/" + file_name + '.csv')
+df_meta = pd.read_csv(path_to_meta)
+
+initial_frame = 3600 #df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
+final_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_end"].iloc[0]
+
+if os.path.exists(path_to_save + "/" + expe[:-4] + '.csv'):
+  os.remove(path_to_save + "/" + expe[:-4] + '.csv')
   print("CSV file exist, It has been removed to a new one be created")
 else:
   print("CSV file does not exist, it will be created")
 
-print(path_to_save + "/" + file_name + '.csv')
  
-with open(path_to_save + "/" + file_name + '.csv', 'w') as fd:
-  fd.write('frame_number,length_of_fish,center_of_mass,fish_tail,fish_head,quadrant,fish_area,fish_id,tail_points,quad_coord\n')
+with open(path_to_save + "/" + expe[:-4] + '.csv', 'w') as fd:
+  fd.write('frame_number,length_of_fish,center_of_mass,fish_tail,fish_head,quadrant,fish_area,fish_id,tail_points,quad_coord,sum_chanel_B,sum_chanel_G,sum_chanel_R,avg_chanel_B,avg_chanel_G,avg_chanel_R,count_chanel\n')
 
 from collections import deque
 import cv2
-#from cmath import nan
 import scipy.stats as stats
 import scikit_posthocs as sp
-#from scipy.stats import skewgit branch
 from scipy.stats import kurtosis
 import scipy.stats
-
-#from scipy.stats import iqr
-#import statistics
-#import seaborn as sns
-#from cv2 import waitKey 
 import numpy as np
 import math
-#import imagehash
-#from PIL import Image     
-#import time
-#update_counter = 23
 import matplotlib.pyplot as plt 
-#import imutils
 from skimage.morphology import skeletonize, thin
 
 
@@ -106,7 +77,7 @@ def crop_img(img):
   contours = contours[0] if len(contours) == 2 else contours[1]
   cntr = contours[0]
   x,y,w,h = cv2.boundingRect(cntr)
-  return img[y:y+h, x:x+w]
+  return img[y:y+h, x+1:x+w-1]   # the 1 is to correct for a small black strip on images
 
 
 
@@ -128,15 +99,9 @@ for idx_frame in range(initial_frame,final_frame,step):
   frame = crop_img(frame)    # crop black borders
   
 
-
-
-
-
-
-
-
   if ret == True:   
     background_frame.append(frame)
+
     
 #result = scipy.stats.mode(np.stack(background_frame), axis=0)
 result = np.median(background_frame,axis=0)
@@ -207,10 +172,41 @@ bw_back = cv2.inpaint(bw_back, mask_fillin, 10, cv2.INPAINT_TELEA)
 
 
 
-#cv2.imshow("paint", bw_back)
+cv2.imshow("paint", bw_back)
 
 
+# find the quadrants
+blur = cv2.medianBlur(bw_back, 9)
+thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+      cv2.THRESH_BINARY,27,2)
 
+cv2.imshow("thresh", thresh)
+
+
+kernel = np.ones((5,5),np.uint8)
+#opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+erosion = cv2.erode(thresh,kernel,iterations = 1)
+
+cv2.imshow("dilation", erosion)
+cnts = cv2.findContours(erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+
+max_area = (frame.shape[0] * frame.shape[1])/4
+min_area = max_area * 0.5
+quadrants_lines = []
+quadrant_values = []
+for c in cnts: 
+    area = cv2.contourArea(c)          
+    if area > min_area and area < max_area:
+        cv2.drawContours(frame, c, -1, (0, 255, 0), 3)
+        cv2.imshow("quad", frame)
+        x,y,w,h = cv2.boundingRect(c)        
+        quadrants_lines.append((x,y,w,h))
+if len(quadrants_lines) != 4:
+  print("Number od detected quadrants is not 4")
+  quit()        
+else:  
+  print("4 quadrants found")
 
 
 
@@ -226,8 +222,6 @@ bw_back = cv2.inpaint(bw_back, mask_fillin, 10, cv2.INPAINT_TELEA)
 
 #bw_back[bw_back<50] = avging[bw_back<50]
 
-if debug==True:
-  cv2.imshow("imm_res", bw_back )
 
 
 
@@ -248,78 +242,11 @@ histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxle
 if debug==True:
   cv2.imshow('bw_back' , bw_back)
 
-
+  cv2.waitKey(1)
 
 
 if (cap.isOpened()== False): 
   print("Error opening video stream or file")
-
-
-   
-# Read until video is completed
-for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
-  #print(idx_frame)
-    
-  
-  cap.set(1, idx_frame)
-  
-  # Capture frame-by-frame
-  ret, frame = cap.read()
-  frame = crop_img(frame)
-  if ret == True:
-      #frame_t = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-      #plt.imshow(frame_t)        
-      #plt.gcf().set_size_inches(13, 12)
-      #plt.title(idx_frame)
-      #plt.gcf().set_size_inches(23, 22)
-      #plt.show()    
-        
-    
-    #########################################################################
-    #detec quadrantes on first image
-    # Load image, grayscale, median blur, sharpen image
-    
-      #image = cv2.imread('1.pn)
-      gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)    
-      blur = cv2.medianBlur(gray, 9)
-      #sharpen_kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-      #sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
-      #blur = cv2.bilateralFilter(gray,9,75,75)
-      # Threshold and morph close
-
-      thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-            cv2.THRESH_BINARY,11,2)
-      kernel = np.ones((15,15),np.uint8)
-      opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-      #thresh = cv2.threshold(gray, 15, 255, cv2.THRESH_BINARY)[1]
-      #thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-            #cv2.THRESH_BINARY,11,2)
-      #kernel = np.ones((15,15),np.uint8)
-      #opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-      # Find contours and filter using threshold area
-      cnts = cv2.findContours(opening, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-      cnts = cnts[0] if len(cnts) == 2 else cnts[1]
-
-      max_area = (frame.shape[0] * frame.shape[1])/4
-      min_area = max_area * 0.5
-      quadrants_lines = []
-      quadrant_values = []
-      for c in cnts:
-          area = cv2.contourArea(c)          
-          if area > min_area and area < max_area:
-              x,y,w,h = cv2.boundingRect(c)
-              quadrants_lines.append((x,y,w,h))
-
-
-      if len(quadrants_lines) != 4:
-        print("Number od detected quadrants is not 4")        
-
-      else:
-        
-        print("4 quadrants found")
-        break
-
-        #quit()          
 
 for idx, coordinates in enumerate(quadrants_lines):
       x,y,w,h = coordinates
@@ -414,14 +341,21 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
     #cv2.imshow("bw_mainImagexxx", bw_mainImage)
 
-    bw_mainImage = bw_mainImage.astype(float)
     
-     
+    
+    #kernel = np.array([[0, -1, 0],
+                   #[-1, 5,-1],
+                   #[0, -1, 0]])
+    #bw_mainImage = cv2.filter2D(src=bw_mainImage, ddepth=-1, kernel=kernel)
+    #bw_back = cv2.filter2D(src=bw_back, ddepth=-1, kernel=kernel) 
 
+
+    bw_mainImage = bw_mainImage.astype(float)
     
     diff = bw_mainImage - bw_back #cv2.absdiff(bw_back, bw_mainImage)
     diff[diff > 0] = 0
     diff = np.absolute(diff)
+    #diff[diff == 255] = 0
     diff = diff.astype(np.uint8)
 
     #plt.imshow(diff)        
@@ -432,19 +366,40 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
  
     
     
-    if debug==True:
-      cv2.imshow("diff", diff)
-  
-          
-    ret,thresh = cv2.threshold(diff,15,255,cv2.THRESH_BINARY) #15
+    
+      
+    edges = cv2.Canny(diff,10,100)
     
     kernel = np.ones((5,5),np.uint8)
-    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)   #eita
+    edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+
+      
+    cannymerged = np.maximum(diff, edges)
+    
+    if debug==True:
+      cv2.imshow("cannymerged", cannymerged)      
+      cv2.imshow("diff", diff)      
+      cv2.imshow("canny", edges)
+     
+          
+    ret,thresh = cv2.threshold(cannymerged,15,255,cv2.THRESH_BINARY) #15
+    
+    kernel = np.ones((2,2),np.uint8)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    
+    kernel = np.ones((5,5),np.uint8)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+
+   
 
     if debug==True:
       cv2.imshow("thress", thresh)
-
+    
+    
+    
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    
     
     
 
@@ -480,10 +435,13 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
       area = cv2.contourArea(cnt) 
       #calculate aspect ratio for template quality filtering   
 
-      if area > 150 and area < 1000:
+      if area > 150 and area < 2000:
         
         mask = np.zeros(frame.shape, dtype=np.uint8)
         mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
+        
+        
+        
         croped_fish = cv2.bitwise_and(frame, mask)
         #cv2.imshow('croped', croped_fish)
         test_hist = croped_fish.copy()
@@ -541,6 +499,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         #will be used for squeleton
         drawn_image_for_skeleton = blank_image.copy()
         drawn_image_for_skeleton = cv2.drawContours(drawn_image_for_skeleton, [cnt], -1, color=(255,255,255),thickness=-1)
+        
+        
+        
         bw_mainImage_sk = cv2.cvtColor(drawn_image_for_skeleton, cv2.COLOR_BGR2GRAY)
         binarizedImage = bw_mainImage_sk / 255
         skeleton = skeletonize(binarizedImage)
@@ -616,7 +577,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         sorted_index = np.argsort(np.array(distances_skeleton_from_head))
                   
         lenght = len(skeleton_coords)      
-        step = int(lenght*.70/3)        
+        step = int(lenght*.70/3)
+        if step == 0:
+          step=1        
         tail_points_filtered = []
         for x in range(lenght-1, 0, -step):
           tail_points_filtered.append(skeleton_coords[sorted_index[x]])     #need to reverse tuple of squeleton as it is y,x not x,y  
@@ -664,8 +627,16 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
         
         ######print quad
-        hor_line = frame.shape[0]/2
-        ver_line = frame.shape[1]/2
+  
+        
+        
+        
+        ver_line = max(list(zip(*quadrants_lines))[0]) - 20
+        hor_line = max(list(zip(*quadrants_lines))[1]) - 20
+        
+        cv2.circle(frame, (fish_COM[0], fish_COM[1]), 2, (255, 0, 0), -1)
+        cv2.circle(frame, (int(ver_line), int(hor_line)), 2, (255, 0, 0), -1)
+        
         if (fish_COM[0] < ver_line)  and (fish_COM[1] > hor_line):  
           quadrant_value = 0
         elif (fish_COM[0] > (hor_line) and fish_COM[1] > (ver_line)):
@@ -675,7 +646,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         elif (fish_COM[0] < (ver_line) and fish_COM[1] < (hor_line)):
           quadrant_value = 3
         else:
-          print("error!!!!!!!!!!!")
+          print("None of quadrant fits!!!")
           quit()
           #quadrant_value = 0
       
@@ -850,12 +821,13 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           dframe.loc[(dframe.fish_id == previous_fish_1_id) & (dframe.quadrant_local == row_q), "fish_id"] = 1
           histograms_ids['2' + str(row_q)] = histograms_X_Y[str(previous_fish_2_id) + str(row_q)]          
           dframe.loc[(dframe.fish_id == previous_fish_2_id) & (dframe.quadrant_local == row_q), "fish_id"] = 2          
-        print("time to decide")
+        print("time to decide in frame ", idx_frame)
         # frequency is set to 500Hz
         freq = 500        
         # duration is set to 100 milliseconds            
         dur = 1000                      
-        winsound.Beep(freq, dur)    
+        if debug==True:
+          winsound.Beep(freq, dur)    
       #############################################################################################################      
         # now we actually are going to decide which fish is which by statistcs          
         cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100
@@ -942,8 +914,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
     
 
-
-
+    
+    
     #write the quadrants
     for idx, coordinates in enumerate(quadrants_lines):
       x,y,w,h = coordinates
@@ -960,7 +932,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           column='frame_number',
           value=idx_frame)
     
-    filt_s_dataf.to_csv(path_to_save + "/" + file_name + '.csv', mode='a', index=False, header=False)
+    filt_s_dataf.to_csv(path_to_save + "/" + expe + '.csv', mode='a', index=False, header=False)
    
 
     if debug==True:
