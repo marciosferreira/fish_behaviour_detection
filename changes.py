@@ -1,7 +1,7 @@
 #usage:
 # python script.py [path to video with filename] [path to save without file name] [path to metadata with filename]
 
-debug = True
+debug = False
 trait_to_analyze = "color" # ["color", "length"]
 
 import sys
@@ -14,9 +14,9 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191115_1615_11-1_R_B.avi" #sys.argv[1]
-path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
-path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
+path_to_video =  sys.argv[1] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191121_1257_iCab_L_C.avi" #sys.argv[1]
+path_to_save = sys.argv[2] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
+path_to_meta = sys.argv[3] #"C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
 import pathlib
 
@@ -25,7 +25,7 @@ expe = final_path.name
 
 df_meta = pd.read_csv(path_to_meta)
 
-initial_frame = 3600 #df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
+initial_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
 final_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_end"].iloc[0]
 
 if os.path.exists(path_to_save + "/" + expe[:-4] + '.csv'):
@@ -172,15 +172,17 @@ bw_back = cv2.inpaint(bw_back, mask_fillin, 10, cv2.INPAINT_TELEA)
 
 
 
-cv2.imshow("paint", bw_back)
+#cv2.imshow("paint", bw_back)
 
 
 # find the quadrants
-blur = cv2.medianBlur(bw_back, 9)
-thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
-      cv2.THRESH_BINARY,27,2)
+blur = cv2.medianBlur(bw_back, 5)
+thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,41,2)
 
-cv2.imshow("thresh", thresh)
+#edges_back = cv2.Canny(bw_back,100,200)
+
+#cv2.imshow("edges_back", edges_back)
+cv2.imshow("bw_back", thresh)
 
 
 kernel = np.ones((5,5),np.uint8)
@@ -202,6 +204,17 @@ for c in cnts:
         cv2.imshow("quad", frame)
         x,y,w,h = cv2.boundingRect(c)        
         quadrants_lines.append((x,y,w,h))
+
+#write the quadrants
+for idx, coordinates in enumerate(quadrants_lines):
+  x,y,w,h = coordinates
+  cv2.rectangle(frame, (x, y), (x + w, y + h), (0,0,255), 2)
+  font = cv2.FONT_HERSHEY_SIMPLEX
+  #cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
+
+cv2.imshow("quad", frame)  
+
+
 if len(quadrants_lines) != 4:
   print("Number od detected quadrants is not 4")
   quit()        
@@ -429,13 +442,14 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     list_red_i = []
 
     counter = 0
-    
+    filt_cont = []
     for idx, cnt in enumerate(contours):
                   
       area = cv2.contourArea(cnt) 
       #calculate aspect ratio for template quality filtering   
 
       if area > 150 and area < 2000:
+        filt_cont.append(cnt)
         
         mask = np.zeros(frame.shape, dtype=np.uint8)
         mask = cv2.drawContours(mask, [cnt], -1, color=(255,255,255),thickness=-1)          
@@ -627,23 +641,52 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         fish_pectoral_lenght = math.sqrt( (aver_head[0] - aver_cm[0][0])  **2 + (aver_head[1] - aver_cm[0][1])**2    )  
         
         ######print quad
-  
+        total_x = frame.shape[1]
+        total_y = frame.shape[0]
+        
+        filter_first_x = [x for x in quadrants_lines if x[0] == 0]
+        average_fx = [(g + h) / 2 for g, h in zip(filter_first_x[0], filter_first_x[1])]
+        average_fx_larg_x = average_fx[2]
+        
+        filter_second_x = [x for x in quadrants_lines if x[0] > 0]
+        average_sx = [(g + h) / 2 for g, h in zip(filter_second_x[0], filter_second_x[1])]
+        average_sx_larg_x = average_sx[2]
+        
+        midle_x = total_x - (average_fx_larg_x + average_sx_larg_x)
+        point_x = average_fx_larg_x + (int(midle_x/2))
+        
+        the_colum = point_x #max(list(zip(*quadrants_lines))[0]) - 20
+        
+        #####################
+        
+        filter_first_y = [x for x in quadrants_lines if x[1] == 0]
+        average_fy = [(g + h) / 2 for g, h in zip(filter_first_y[0], filter_first_y[1])]
+        average_fy_alt_y = average_fy[3]
+        
+        filter_second_y = [x for x in quadrants_lines if x[1] > 0]
+        average_sy = [(g + h) / 2 for g, h in zip(filter_second_y[0], filter_second_y[1])]
+        average_sy_alt_y = average_sy[3]
+        
+        midle_y = total_y - (average_fy_alt_y + average_sy_alt_y)
+        point_y = average_fy_alt_y + (int(midle_y/2))
+        
+        the_row = point_y #max(list(zip(*quadrants_lines))[0]) - 20
         
         
+        #debug_image = blank_image.copy()
         
-        ver_line = max(list(zip(*quadrants_lines))[0]) - 20
-        hor_line = max(list(zip(*quadrants_lines))[1]) - 20
+        cv2.circle(frame, (int(the_colum), int(the_row)), 2, (0, 0, 255), -1)
+        cv2.imshow("the midle", frame)
+        #cv2.circle(debug_image, (10, int(the_row)), 2, (255, 0, 0), -1)
         
-        cv2.circle(frame, (fish_COM[0], fish_COM[1]), 2, (255, 0, 0), -1)
-        cv2.circle(frame, (int(ver_line), int(hor_line)), 2, (255, 0, 0), -1)
-        
-        if (fish_COM[0] < ver_line)  and (fish_COM[1] > hor_line):  
+        #cv2.imshow("debug", debug_image)
+        if (fish_COM[0] < the_colum)  and (fish_COM[1] > the_row):  
           quadrant_value = 0
-        elif (fish_COM[0] > (hor_line) and fish_COM[1] > (ver_line)):
-          quadrant_value = 1
-        elif (fish_COM[0] > (ver_line) and fish_COM[1] < (hor_line)):
+        elif (fish_COM[0] > the_colum) and (fish_COM[1] < the_row):
           quadrant_value = 2
-        elif (fish_COM[0] < (ver_line) and fish_COM[1] < (hor_line)):
+        elif (fish_COM[0] > the_colum) and (fish_COM[1] > the_row):
+          quadrant_value = 1
+        elif (fish_COM[0] < the_colum) and (fish_COM[1] < the_row):
           quadrant_value = 3
         else:
           print("None of quadrant fits!!!")
@@ -683,6 +726,11 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
                         
         counter +=1
     
+    template = np.zeros(frame.shape, dtype=np.uint8)
+    countours_f = cv2.drawContours(template, filt_cont, -1, color=(255,255,255),thickness=-1)
+    
+    cv2.imshow("countours_f", countours_f)          
+
     
     dframe = pd.DataFrame(idx_local)
     dframe['lenght_of_fish_local'] = lenght_of_fish_local
@@ -713,7 +761,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     unique_quadrants = dframe.quadrant_local.unique()
     for index_q, row_q in enumerate(unique_quadrants):      
       fish_per_quadrant = (dframe['quadrant_local']==row_q).sum() 
-      if fish_per_quadrant < 2:                   
+      if fish_per_quadrant != 2:                   
         active[row_q] = "XY"
         is_first_iteraction[row_q] = True        
         histograms_X_Y["X" + str(row_q)] = deque(maxlen=60)
@@ -728,6 +776,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         # # first interaction (frame) only after a collision event, so we have to reset XY    
              
       if (active[row_q] == "XY" and is_first_iteraction[row_q] == True) | (len(histograms_ids[str(1) + str(row_q)]) == 0):                       
+   
         dframe.loc[dframe['quadrant_local'] == row_q, 'fish_id'] = [x for x in ['X', 'Y']]
         list_idx = dframe.loc[dframe['quadrant_local'] == row_q].index.tolist()                   
         histograms_X_Y['X'+ str(row_q)].append(histograms[list_idx[0]])  
@@ -916,14 +965,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
 
     
     
-    #write the quadrants
-    for idx, coordinates in enumerate(quadrants_lines):
-      x,y,w,h = coordinates
-      cv2.rectangle(frame, (x, y), (x + w, y + h), (36,255,12), 2)
-      font = cv2.FONT_HERSHEY_SIMPLEX
-      #cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
-
-   
+    
     
     #select fields to write to csv
     filt_dframe = dframe.loc[(dframe['fish_id'] == "X") | (dframe['fish_id'] == "Y") | (dframe['fish_id'] == 1) | (dframe['fish_id'] == 2)]
@@ -932,7 +974,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           column='frame_number',
           value=idx_frame)
     
-    filt_s_dataf.to_csv(path_to_save + "/" + expe + '.csv', mode='a', index=False, header=False)
+    filt_s_dataf.to_csv(path_to_save + "/" + expe[:-4] + '.csv', mode='a', index=False, header=False)
    
 
     if debug==True:
