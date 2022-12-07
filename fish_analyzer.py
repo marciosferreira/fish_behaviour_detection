@@ -1,7 +1,7 @@
 #usage:
 # python script.py [path to video with filename] [path to save without file name] [path to metadata with filename]
 
-debug = False
+debug = True
 trait_to_analyze = "color" # ["color", "length"]
 
 import sys
@@ -14,9 +14,9 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video =  sys.argv[1] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191121_1257_iCab_L_C.avi" #sys.argv[1]
-path_to_save = sys.argv[2] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
-path_to_meta = sys.argv[3] #"C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
+path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191120_1158_135-1_L_C.avi" #sys.argv[1]
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
+path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
 import pathlib
 
@@ -25,7 +25,7 @@ expe = final_path.name
 
 df_meta = pd.read_csv(path_to_meta)
 
-initial_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
+initial_frame = 15000 #df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
 final_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_end"].iloc[0]
 
 if os.path.exists(path_to_save + "/" + expe[:-4] + '.csv'):
@@ -279,7 +279,7 @@ for idx, coordinates in enumerate(quadrants_lines):
 #clear_output(wait=True)
 
 
-
+"""
                
 for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
   print(idx_frame)
@@ -296,7 +296,7 @@ for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
         cv2.imshow('Main',frame)
         cv2.waitKey(1)  
       
-      
+"""     
       
       
       
@@ -676,6 +676,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         #debug_image = blank_image.copy()
         
         cv2.circle(frame, (int(the_colum), int(the_row)), 2, (0, 0, 255), -1)
+        cv2.circle(frame, (fish_COM[0], fish_COM[1]), 2, (0, 0, 255), -1)
         cv2.imshow("the midle", frame)
         #cv2.circle(debug_image, (10, int(the_row)), 2, (255, 0, 0), -1)
         
@@ -690,7 +691,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           quadrant_value = 3
         else:
           print("None of quadrant fits!!!")
-          quit()
+          continue
           #quadrant_value = 0
       
 

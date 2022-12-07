@@ -1,6 +1,3 @@
-
-
-# Check if camera opened successfully
 import pickle
 import winsound
 
@@ -48,7 +45,7 @@ if (cap.isOpened()== False):
 from itertools import cycle
 
 color_cycle = cycle(((0,0,255),(0,255,0),(255,0,0)))
-
+color = None
 #frame_n = 0
 
 
@@ -169,7 +166,7 @@ for quadrant in [2]: # [0,1,2,3]
                 
                 
                 x_norm_2 = [float(i) - x_norm[0] for i in x_norm]
-                y_norm_2 = [float(i) - y_norm[1] for i in y_norm]
+                y_norm_2 = [float(i) - y_norm[1] for i in y_norm]  # type: ignore
                 
                 
                 
@@ -446,11 +443,3 @@ for quadrant in [2]: # [0,1,2,3]
 print(df.columns)
 df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence','tail_coords', 'take']]
 df.to_csv('C:/Users/marcio/Documents/fish_analyzer_final' + '.csv', mode='w', index=True, header=True)
-
-
-
-
-
-
-
-
