@@ -1,22 +1,26 @@
 
 import os
 import pathlib
+import sys
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191120_1158_135-1_L_C.avi" #sys.argv[1]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191111_1527_5-1_L_A.csv" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
 expe = final_path.name[:-4]
 
-if os.path.exists(path_to_csv):
-  os.remove(path_to_csv)
-  print("CSV file exist, It has been removed to a new one be created")
+if os.path.exists(path_to_save + "/rotated_" + expe + ".csv"):
+  #os.remove(path_to_save + "/" + expe + ".csv")
+  print("CSV save file exist, remove it first run it again")
+  quit()
 else:
-  print("CSV file does not exist, it will be created")
+  print("CSV save file does not exist, it will be created")
   
 quadrante_numbers = [0, 1, 2, 3] # 0 to 3
 fish_identification = [1, 2] # 1 to 2
 import pandas as pd
+pd.options.mode.chained_assignment = None  # default='warn'
+
 import numpy as np
 
 df = pd.read_csv(path_to_csv)
@@ -39,9 +43,10 @@ for quadrant in quadrante_numbers:
         list_frames = list(df[(df["quadrant"] == quadrant) & ((df["fish_id"] == str(fish_ident)) | (df["fish_id"] == "X") | (df["fish_id"] == "Y")) ].index.unique())
         for idx, value in enumerate(list_frames):
             if idx > 0:
-                print("quadrant:" , quadrant)
-                print("fish_id:", fish_ident)
-                print("the idx:", idx)
+                if idx%100==0: 
+                    print("quadrant:" , quadrant)
+                    print("fish_id:", fish_ident)
+                    print("the idx:", idx)
                 the_value = df.loc[(df.index==value) & (df.quadrant == quadrant) & ((df["fish_id"] == str(fish_ident)) | (df["fish_id"] == "X") | (df["fish_id"] == "Y")), 'fish_id'].iloc[0]
                 previous_value = df.loc[(df.index==list_frames[idx-1]) & (df.quadrant == quadrant) & ((df["fish_id"] == str(fish_ident)) | (df["fish_id"] == "X") | (df["fish_id"] == "Y")), 'fish_id'].iloc[0]
                 if the_value.isnumeric() and previous_value.isnumeric():
@@ -88,17 +93,12 @@ df_filtered['diff'] = df_filtered.groupby(["quadrant", "fish_id", "take"])['abs_
 df_filtered["displace"] = np.NAN
 
 for quadrant in quadrante_numbers:
-    print(quadrant)
     for fish_ident in fish_identification:
-        print(fish_ident)
         the_takes = df_filtered[(df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident)]["take"].unique()
-        print(the_takes)
         for take_id in the_takes:
             list_frames = df_filtered[(df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident) & (df_filtered["take"] == take_id)].index.values
-            #print(list_frames)
             for idx, value in enumerate(list_frames):
-                if idx > 1:
-                    
+                if idx > 1:                    
                                
                     the_value = df_filtered.loc[(df_filtered.index==value) & (df_filtered.quadrant == quadrant) & (df_filtered["take"] == take_id ) & (df_filtered.fish_id == fish_ident ), 'fish_head'].iloc[0]
                     previous_value = df_filtered.loc[(df_filtered.index==list_frames[idx-1]) & (df_filtered.quadrant == quadrant) & (df_filtered["take"] == take_id) & (df_filtered.fish_id == fish_ident ), 'fish_head'].iloc[0]           
@@ -148,8 +148,8 @@ for quadrant in quadrante_numbers:
             list_frames = df_filtered[(df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident) & (df_filtered["take"] == take_id)].index.values
             #print(list_frames)
             for idx, value in enumerate(list_frames):
-                if idx > 0:                   
-                    print("will apply")                                                      
+                if idx > 0:      
+                                                                        
                     current_position = df_filtered.loc[(df_filtered.index==value) & (df_filtered.quadrant == quadrant) & (df_filtered["take"] == take_id ) & (df_filtered.fish_id == fish_ident ), 'angle'].iloc[0][0]
                     predicted_position = df_filtered.loc[(df_filtered.index==list_frames[idx-1]) & (df_filtered.quadrant == quadrant) & (df_filtered["take"] == take_id) & (df_filtered.fish_id == fish_ident ), 'next_predicted'].iloc[0]           
                     if isinstance(predicted_position, tuple):
@@ -161,30 +161,16 @@ for quadrant in quadrante_numbers:
 df_filtered['sequence'] = None
 sequence_number = 1
 for quadrant in quadrante_numbers:
-    print(quadrant)
     for fish_ident in fish_identification:
-        print(fish_ident)
         the_takes = df_filtered[(df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident)]["take"].unique()
         for take_id in the_takes:
-            #sequence_number = 1
-
             list_frames = df_filtered[(df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident) & (df_filtered["take"] == take_id)].index.values
-            #print(list_frames)
-            for idx, value in enumerate(list_frames):
-                
+            for idx, value in enumerate(list_frames):                
                 the_fish = df_filtered[(df_filtered.index == value) & (df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident) & (df_filtered["take"] == take_id)]
-                #print(the_fish["tail_points"].iloc[0])
-               
-               
                 
                 if  (the_fish['diff_pred'].iloc[0] < 3) and (the_fish['diff'].iloc[0] < 2)  and (the_fish['displace'].iloc[0] < 6.5):
-                   #(the_fish['diff_pred'].iloc[0] < 50) and
-                    print("added")
-                    print(sequence_number)
-                    print(result_variance)
-                    print(y_list[0:3])
+                                      
                     df_filtered.loc[(df_filtered.index == value) & (df_filtered["quadrant"] == quadrant) & (df_filtered["fish_id"] == fish_ident) & (df_filtered["take"] == take_id), 'sequence'] = sequence_number 
-                    #df_filtered.loc[df_filtered.index[idx], 'sequence'] = sequence_number
                 else:                   
                     sequence_number = sequence_number + 1
                    
@@ -212,18 +198,8 @@ final_df["coord_plus_seq"] = final_df.apply(lambda x: x.fish_head + (int(x.seque
 
 
 
-'''final_df = final_df[['length_of_fish', 'center_of_mass', 'fish_tail',
+final_df = final_df[['length_of_fish', 'center_of_mass', 'fish_tail',
        'fish_head', 'quadrant', 'fish_area', 'fish_id', 'tail_points', 
-       'quad_coord', 'sequence', "take"]]'''
+       'quad_coord', 'sequence', "take"]]
 
 final_df.to_csv(path_to_save + '/rotated_' + expe + '.csv', mode='w', index=True, header=True)
-
-
-
-
-
-
-
-
-
-

@@ -21,19 +21,22 @@ else:
 
 df = pd.read_csv(path_to_csv).set_index('frame_number')
 
-df["angle_corr_tail"] = None
 df["tail_poly_corrected"] = None
 df["distances"] = np.NaN
 
 df['fish_head'] = df['fish_head'].apply(ast.literal_eval)
 df['center_of_mass'] = df['center_of_mass'].apply(ast.literal_eval)
 df['tail_points'] = df['tail_points'].apply(ast.literal_eval)
+df["angle_corr_tail"] = df['tail_points']
+
+
 
 for quadrant in [0,1,2,3]: # [0,1,2,3]
     for fish_ident in [1,2]: # [1,2]    
         frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
         for idx_frame in frames_numbers:            
             the_row = df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)]
+            print(the_row)
             # Define x, y, and xnew to resample at.      
             x_list = list(zip(*the_row["tail_points"].iloc[0]))[1]           
             y_list_inv = list(zip(*the_row["tail_points"].iloc[0]))[0]
@@ -78,11 +81,12 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             
             corrected_tails_points = [list(a) for a in zip(x_norm_2, y_norm_2)]
             
-            #insert modeled to df
             df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'] = str(corrected_tails_points)
-        
+            print(df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'])
+            pass
 
         def distances(t):
+            t = ast.literal_eval(t)
             distances = []
             for idx, _ in enumerate(t):
                 if idx > 0:
@@ -90,19 +94,20 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
                     distances.append(distance)
             return sum(distances)
         
-        def literal_set(list_):
-            if isinstance(list_, str):
-                return ast.literal_eval(list_)
+        #def literal_set(list_):
+            #if isinstance(list_, str):
+                #return ast.literal_eval(list_)
             
             
-        df['angle_corr_tail'] = df['angle_corr_tail'].apply(literal_set)
+        #df['angle_corr_tail'] = df['angle_corr_tail'].apply(literal_set)
 
         df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'] = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'].apply(distances)
 
         standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].mean()
 
         def coord_calc(row):
-            tail_points = row["angle_corr_tail"]
+            tail_points_str = row["angle_corr_tail"]
+            tail_points = ast.literal_eval(tail_points_str)
             summed_distances = []
             for idx, _ in enumerate(tail_points):
                 if idx > 0:
@@ -129,21 +134,19 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
                             distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
                             summed_distances.append(distance)
                     summed_distances = sum(summed_distances)
-        
 
-        df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].apply(coord_calc, axis=1) 
-        
-        def modeled(tail_points):
             x_tail = list(zip(*tail_points))[0]
             y_tail = list(zip(*tail_points))[1]  
             model4 = np.poly1d(np.polyfit(x_tail, y_tail, 3))                    
             y_modeled = tuple(model4(x_tail))
             x_modeled = tuple(y_tail)
-            return [list(a) for a in zip(x_modeled, y_modeled)]
+            
+            df.loc[(df.index == row.name) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'] = str(tuple(zip(x_modeled, y_modeled)))
+            
 
+        df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].apply(coord_calc, axis=1) 
         
-        df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'].apply(modeled)
-        
+
 
 df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence','angle_corr_tail', 'take']]
 df.to_csv(path_to_save + '/wave_corrected_' + final_path.name[8:], mode='w', index=True, header=True)

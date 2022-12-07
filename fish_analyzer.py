@@ -1,7 +1,7 @@
 #usage:
 # python script.py [path to video with filename] [path to save without file name] [path to metadata with filename]
 
-debug = True
+debug = False
 trait_to_analyze = "color" # ["color", "length"]
 
 import sys
@@ -14,9 +14,9 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191120_1158_135-1_L_C.avi" #sys.argv[1]
-path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
-path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
+path_to_video =  sys.argv[1] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191121_1257_iCab_L_C.avi" #sys.argv[1]
+path_to_save = sys.argv[2] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
+path_to_meta = sys.argv[3] #"C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
 import pathlib
 
@@ -25,12 +25,13 @@ expe = final_path.name
 
 df_meta = pd.read_csv(path_to_meta)
 
-initial_frame = 15000 #df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
+initial_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_start"].iloc[0] + 200
 final_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_end"].iloc[0]
 
 if os.path.exists(path_to_save + "/" + expe[:-4] + '.csv'):
   os.remove(path_to_save + "/" + expe[:-4] + '.csv')
-  print("CSV file exist, It has been removed to a new one be created")
+  print("CSV file exist, remove it first")
+  quit()
 else:
   print("CSV file does not exist, it will be created")
 
@@ -182,14 +183,14 @@ thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRES
 #edges_back = cv2.Canny(bw_back,100,200)
 
 #cv2.imshow("edges_back", edges_back)
-cv2.imshow("bw_back", thresh)
+#cv2.imshow("bw_back", thresh)
 
 
 kernel = np.ones((5,5),np.uint8)
 #opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 erosion = cv2.erode(thresh,kernel,iterations = 1)
 
-cv2.imshow("dilation", erosion)
+#cv2.imshow("dilation", erosion)
 cnts = cv2.findContours(erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 cnts = cnts[0] if len(cnts) == 2 else cnts[1]
 
@@ -200,8 +201,8 @@ quadrant_values = []
 for c in cnts: 
     area = cv2.contourArea(c)          
     if area > min_area and area < max_area:
-        cv2.drawContours(frame, c, -1, (0, 255, 0), 3)
-        cv2.imshow("quad", frame)
+        #cv2.drawContours(frame, c, -1, (0, 255, 0), 3)
+        #cv2.imshow("quad", frame)
         x,y,w,h = cv2.boundingRect(c)        
         quadrants_lines.append((x,y,w,h))
 
@@ -212,7 +213,7 @@ for idx, coordinates in enumerate(quadrants_lines):
   font = cv2.FONT_HERSHEY_SIMPLEX
   #cv2.putText(frame, str(idx),(x, y+25), font, 1, (255,255,255), 2) 
 
-cv2.imshow("quad", frame)  
+#cv2.imshow("quad", frame)  
 
 
 if len(quadrants_lines) != 4:
@@ -279,10 +280,11 @@ for idx, coordinates in enumerate(quadrants_lines):
 #clear_output(wait=True)
 
 
-"""
-               
+
+"""               
 for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
-  print(idx_frame)
+  if idx_frame%100==0: 
+    print(idx_frame)
     
   
   cap.set(1, idx_frame)
@@ -294,9 +296,9 @@ for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
   if ret == True:
       if debug==True:
         cv2.imshow('Main',frame)
-        cv2.waitKey(1)  
+        cv2.waitKey(1)  """
       
-"""     
+      
       
       
       
@@ -304,7 +306,8 @@ for idx_frame in range(0, initial_frame, 1):   # only to check wich fish is icab
         
         ###########################################################
 for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000 
-  print(idx_frame)
+  if idx_frame%100==0:
+    print(idx_frame)
     
   
   cap.set(1, idx_frame)
@@ -675,9 +678,8 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         
         #debug_image = blank_image.copy()
         
-        cv2.circle(frame, (int(the_colum), int(the_row)), 2, (0, 0, 255), -1)
-        cv2.circle(frame, (fish_COM[0], fish_COM[1]), 2, (0, 0, 255), -1)
-        cv2.imshow("the midle", frame)
+        #cv2.circle(frame, (int(the_colum), int(the_row)), 2, (0, 0, 255), -1)
+        #cv2.imshow("the midle", frame)
         #cv2.circle(debug_image, (10, int(the_row)), 2, (255, 0, 0), -1)
         
         #cv2.imshow("debug", debug_image)
@@ -728,9 +730,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         counter +=1
     
     template = np.zeros(frame.shape, dtype=np.uint8)
-    countours_f = cv2.drawContours(template, filt_cont, -1, color=(255,255,255),thickness=-1)
+    #countours_f = cv2.drawContours(template, filt_cont, -1, color=(255,255,255),thickness=-1)
     
-    cv2.imshow("countours_f", countours_f)          
+    #cv2.imshow("countours_f", countours_f)          
 
     
     dframe = pd.DataFrame(idx_local)
