@@ -6,8 +6,10 @@ import ast
 import os
 import pathlib
 import math
+from matplotlib import pyplot as plt
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/rotated_20191111_1527_5-1_L_A.csv" #sys.argv[1]
+
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/rotated_20191116_1039_18-2_L_B.csv" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
@@ -34,9 +36,11 @@ df["angle_corr_tail"] = df['tail_points']
 for quadrant in [0,1,2,3]: # [0,1,2,3]
     for fish_ident in [1,2]: # [1,2]    
         frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
-        for idx_frame in frames_numbers:            
+        for idx_frame in frames_numbers:
+            if idx_frame%100==0: 
+                print(quadrant, fish_ident, idx_frame)            
             the_row = df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)]
-            print(the_row)
+            #print(the_row)
             # Define x, y, and xnew to resample at.      
             x_list = list(zip(*the_row["tail_points"].iloc[0]))[1]           
             y_list_inv = list(zip(*the_row["tail_points"].iloc[0]))[0]
@@ -82,7 +86,7 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             corrected_tails_points = [list(a) for a in zip(x_norm_2, y_norm_2)]
             
             df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'] = str(corrected_tails_points)
-            print(df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'])
+            #print(df.loc[(df.index == idx_frame) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'])
             pass
 
         def distances(t):
@@ -137,9 +141,17 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
             x_tail = list(zip(*tail_points))[0]
             y_tail = list(zip(*tail_points))[1]  
-            model4 = np.poly1d(np.polyfit(x_tail, y_tail, 3))                    
-            y_modeled = tuple(model4(x_tail))
-            x_modeled = tuple(y_tail)
+          
+            
+            #xnew = np.linspace(x_tail[0], x_tail[-1])            
+            model3 = np.poly1d(np.polyfit(x_tail, y_tail, 3))            
+            y_modeled = tuple(model3(x_tail))
+            x_modeled = tuple(x_tail)
+            #plt.figure(1)         
+            #plt.plot(x_modeled, model3(x_modeled)) 
+            #plt.pause(1)
+            
+            
             
             df.loc[(df.index == row.name) & (df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'] = str(tuple(zip(x_modeled, y_modeled)))
             
@@ -148,7 +160,10 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
         
 
 
-df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 'fish_id', 'quad_coord', 'sequence','angle_corr_tail', 'take']]
+df = df[['length_of_fish', 'center_of_mass', 'fish_tail', 'fish_head', 'quadrant', 'fish_area', 
+         'fish_id', 'quad_coord', 'sequence','angle_corr_tail', 'take', "sum_chanel_B", "sum_chanel_G", 
+         'sum_chanel_R', "avg_chanel_B", "avg_chanel_G", "avg_chanel_R", "count_chanel"]]
+
 df.to_csv(path_to_save + '/wave_corrected_' + final_path.name[8:], mode='w', index=True, header=True)
 
 

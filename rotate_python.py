@@ -3,7 +3,7 @@ import os
 import pathlib
 import sys
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191111_1527_5-1_L_A.csv" #sys.argv[1]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/rotated_20191116_1039_18-2_L_B.csv" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
@@ -193,13 +193,13 @@ filtered_count = set(filtered_count)
 final_df = df_filtered[df_filtered['sequence'].isin(filtered_count)]
 
 
-final_df["coord_plus_seq"] = np.NaN
-final_df["coord_plus_seq"] = final_df.apply(lambda x: x.fish_head + (int(x.sequence),) + ((x.tail_points),), axis = 1)
+#final_df["coord_plus_seq"] = np.NaN
+#final_df["coord_plus_seq"] = final_df.apply(lambda x: x.fish_head + (int(x.sequence),) + ((x.tail_points),), axis = 1)
 
 
 
 final_df = final_df[['length_of_fish', 'center_of_mass', 'fish_tail',
        'fish_head', 'quadrant', 'fish_area', 'fish_id', 'tail_points', 
-       'quad_coord', 'sequence', "take"]]
+       'quad_coord', 'sequence', "take", "sum_chanel_B", "sum_chanel_G", 'sum_chanel_R', "avg_chanel_B", "avg_chanel_G", "avg_chanel_R", "count_chanel"]]
 
 final_df.to_csv(path_to_save + '/rotated_' + expe + '.csv', mode='w', index=True, header=True)

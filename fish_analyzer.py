@@ -1,7 +1,7 @@
 #usage:
 # python script.py [path to video with filename] [path to save without file name] [path to metadata with filename]
 
-debug = False
+debug = True
 trait_to_analyze = "color" # ["color", "length"]
 
 import sys
@@ -14,9 +14,9 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video =  sys.argv[1] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191121_1257_iCab_L_C.avi" #sys.argv[1]
-path_to_save = sys.argv[2] #"C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
-path_to_meta = sys.argv[3] #"C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
+path_to_video =  "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191118_1311_80-2_L_B.avi" #sys.argv[1]
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
+path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
 import pathlib
 
@@ -31,7 +31,7 @@ final_frame = df_meta.loc[df_meta["sample"] == expe[:-4]]["of_end"].iloc[0]
 if os.path.exists(path_to_save + "/" + expe[:-4] + '.csv'):
   os.remove(path_to_save + "/" + expe[:-4] + '.csv')
   print("CSV file exist, remove it first")
-  quit()
+  #quit()
 else:
   print("CSV file does not exist, it will be created")
 
@@ -188,7 +188,7 @@ thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRES
 
 kernel = np.ones((5,5),np.uint8)
 #opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-erosion = cv2.erode(thresh,kernel,iterations = 1)
+erosion = cv2.erode(thresh,kernel,iterations = 2)
 
 #cv2.imshow("dilation", erosion)
 cnts = cv2.findContours(erosion, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -250,8 +250,8 @@ lopp = 0
 
 previous_id_fish_local = []
 
-histograms_ids = {'10':deque(maxlen=60), '11':deque(maxlen=60), '12':deque(maxlen=60), '13':deque(maxlen=60), '20':deque(maxlen=60), '21':deque(maxlen=60), '22':deque(maxlen=60), '23':deque(maxlen=60)}
-histograms_X_Y = {"X0":deque(maxlen=60), "X1":deque(maxlen=60), "X2":deque(maxlen=60), "X3":deque(maxlen=60), "Y0":deque(maxlen=60), "Y1":deque(maxlen=60), "Y2":deque(maxlen=60), "Y3":deque(maxlen=60)}
+histograms_ids = {'10':deque(maxlen=20), '11':deque(maxlen=20), '12':deque(maxlen=20), '13':deque(maxlen=20), '20':deque(maxlen=20), '21':deque(maxlen=20), '22':deque(maxlen=20), '23':deque(maxlen=20)}
+histograms_X_Y = {"X0":deque(maxlen=20), "X1":deque(maxlen=20), "X2":deque(maxlen=20), "X3":deque(maxlen=20), "Y0":deque(maxlen=20), "Y1":deque(maxlen=20), "Y2":deque(maxlen=20), "Y3":deque(maxlen=20)}
 
 if debug==True:
   cv2.imshow('bw_back' , bw_back)
@@ -695,7 +695,41 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           print("None of quadrant fits!!!")
           continue
           #quadrant_value = 0
-      
+
+        the_q_index = []
+        for q in quadrants_lines:
+          if (q[0] == 0) and (q[1] > 0):
+            the_q_index.append(0)
+          elif (q[0] > 0) and (q[1] > 0):
+            the_q_index.append(1)
+          elif (q[0] > 0) and (q[1] == 0):
+            the_q_index.append(2)
+          elif (q[0] == 0) and (q[1] == 0):
+            the_q_index.append(3)
+            
+        index_q = the_q_index.index(quadrant_value)  
+        
+        #if fish is on bondaries, discard frame
+        if (quadrant_value == 0):
+          if any((pixel <= quadrants_lines[index_q][0]+10) or (pixel >= quadrants_lines[index_q][0]+quadrants_lines[index_q][2]) \
+          for pixel in cnt[:,0][:,0]) | any((pixel <= quadrants_lines[index_q][1]) or (pixel >= quadrants_lines[index_q][1]+quadrants_lines[index_q][3]-10) \
+          for pixel in cnt[:,0][:,1]):
+            continue
+        if (quadrant_value == 1):
+          if any((pixel <= quadrants_lines[index_q][0]) or (pixel >= quadrants_lines[index_q][0]+quadrants_lines[index_q][2]-10) \
+          for pixel in cnt[:,0][:,0]) | any((pixel <= quadrants_lines[index_q][1]) or (pixel >= quadrants_lines[index_q][1]+quadrants_lines[index_q][3]-10) \
+          for pixel in cnt[:,0][:,1]):
+            continue
+        if (quadrant_value == 2):
+          if any((pixel <= quadrants_lines[index_q][0]) or (pixel >= quadrants_lines[index_q][0]+quadrants_lines[index_q][2]-10) \
+          for pixel in cnt[:,0][:,0]) | any((pixel <= quadrants_lines[index_q][1]+10) or (pixel >= quadrants_lines[index_q][1]+quadrants_lines[index_q][3]) \
+          for pixel in cnt[:,0][:,1]):
+            continue
+        if (quadrant_value == 3):
+          if any((pixel <= quadrants_lines[index_q][0]+10) or (pixel >= quadrants_lines[index_q][0]+quadrants_lines[index_q][2]) \
+          for pixel in cnt[:,0][:,0]) | any((pixel <= quadrants_lines[index_q][1]+10) or (pixel >= quadrants_lines[index_q][1]+quadrants_lines[index_q][3]) \
+          for pixel in cnt[:,0][:,1]):
+            continue    
 
         #store variables locally in the loop for immediate calculation purposes
         idx_local.append(counter)          
@@ -710,7 +744,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         template_blur.append(0)
         template_dark.append(0)
         skeleton_list.append(tail_points_filtered) 
-        quad_coord.append(quadrants_lines[quadrant_value])
+        quad_coord.append(quadrants_lines[index_q])
         list_sum_chanel_B.append(sum_chanel_B)
         list_sum_chanel_G.append(sum_chanel_G)
         list_sum_chanel_R.append(sum_chanel_R)
@@ -761,18 +795,17 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
     #block 2
     # check if there is only one fish (overlap event), and if yes, recreate the XY and change to it
-    unique_quadrants = dframe.quadrant_local.unique()
+    unique_quadrants = [0, 1, 2, 3]
     for index_q, row_q in enumerate(unique_quadrants):      
       fish_per_quadrant = (dframe['quadrant_local']==row_q).sum() 
       if fish_per_quadrant != 2:                   
         active[row_q] = "XY"
         is_first_iteraction[row_q] = True        
-        histograms_X_Y["X" + str(row_q)] = deque(maxlen=60)
-        histograms_X_Y["Y" + str(row_q)] = deque(maxlen=60)
-            
+        histograms_X_Y["X" + str(row_q)] = deque(maxlen=20)
+        histograms_X_Y["Y" + str(row_q)] = deque(maxlen=20)
         continue
-      
-        
+    
+    
         
         #########################################################################
         # block 1
@@ -845,7 +878,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
     
       #only go ahead to choose which fish is which if the variable active = xy (means that it is time to choose)
       
-      if active[row_q] == 'XY' and len(histograms_X_Y['Y' + str(row_q)]) == 60 and len(histograms_X_Y['X' + str(row_q)]) == 60:
+      if active[row_q] == 'XY' and len(histograms_X_Y['Y' + str(row_q)]) == 20 and len(histograms_X_Y['X' + str(row_q)]) == 20:
       
         t_stat_filter, p_val_filter = stats.ttest_ind(histograms_X_Y['X' + str(row_q)], histograms_X_Y['Y' + str(row_q)], equal_var=False)
         cov = lambda x: np.std(x, ddof=1) / np.mean(x) * 100                   
@@ -853,7 +886,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
         cov2 = cov(histograms_X_Y['X' + str(+row_q)])
         
             
-        if p_val_filter < 0.01 and abs(t_stat_filter) > 10 and kurtosis(histograms_X_Y['Y' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['Y' + str(row_q)]) > 0 and kurtosis(histograms_X_Y['X' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['X' + str(row_q)]) > 0:  
+        if p_val_filter < 0.01 and abs(t_stat_filter) > 5 : #and kurtosis(histograms_X_Y['Y' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['Y' + str(row_q)]) > 0 and kurtosis(histograms_X_Y['X' + str(row_q)]) < 1 and kurtosis(histograms_X_Y['X' + str(row_q)]) > 0:  
           active[row_q] = 'id'
           
         else:
@@ -861,9 +894,9 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
               
         
       ############################################################################################################
-      # the minimum statistics and count (60) were reached in lists (XY), then we go ahead to choose which fish is which,
+      # the minimum statistics and count (20) were reached in lists (XY), then we go ahead to choose which fish is which,
       #but if we have no id values yet, as is the very begining, we need to copy them from xy.      
-        if len(histograms_ids['1' + str(row_q)]) < 60 or len(histograms_ids['2' + str(row_q)]) < 60:
+        if len(histograms_ids['1' + str(row_q)]) < 20 or len(histograms_ids['2' + str(row_q)]) < 20:
           previous_fish_1 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[0]   
           previous_fish_2 = previous_df.loc[previous_df['quadrant_local'] == row_q].iloc[1]
           previous_fish_1_id = previous_fish_1['fish_id']
