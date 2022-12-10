@@ -9,7 +9,7 @@ import math
 from matplotlib import pyplot as plt
 
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/rotated_20191116_1039_18-2_L_B.csv" #sys.argv[1]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/filtered_20191113_1302_53-2_L_A.csv" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
@@ -107,37 +107,49 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
 
         df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'] = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'angle_corr_tail'].apply(distances)
 
-        standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].mean()
+        standart_distance = df.loc[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident), 'distances'].median()
 
         def coord_calc(row):
+            print("the frame")
+            print(row.name)
             tail_points_str = row["angle_corr_tail"]
             tail_points = ast.literal_eval(tail_points_str)
+            x_tail_to_check = list(zip(*tail_points))[0]
+            if sorted(x_tail_to_check) != x_tail_to_check:
+                return
             summed_distances = []
             for idx, _ in enumerate(tail_points):
                 if idx > 0:
                     distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
                     summed_distances.append(distance)
-            summed_distances = sum(summed_distances)         
+            summed_distances = sum(summed_distances) 
+                    
             if summed_distances > standart_distance:
                 while summed_distances > standart_distance:
+                    print(row.name)
+
                     for i in range(1, 5):
                         tail_points[i][0] = ((tail_points[i][0])*0.99) 
-                    summed_distances = []
+                    summed_distances_ind = []
                     for idx, _ in enumerate(tail_points):
                         if idx > 0:
                             distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
-                            summed_distances.append(distance)
-                    summed_distances = sum(summed_distances) 
+                            summed_distances_ind.append(distance)
+                    summed_distances = sum(summed_distances_ind)
+                    print(summed_distances)
             else:
                 while summed_distances < standart_distance:
+                    print(row.name)
+
                     for i in range(1, 5):
                         tail_points[i][0] = ((tail_points[i][0])*1.01)           
-                    summed_distances = []
+                    summed_distances_ind = []
                     for idx, _ in enumerate(tail_points):
                         if idx > 0:
                             distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
-                            summed_distances.append(distance)
-                    summed_distances = sum(summed_distances)
+                            summed_distances_ind.append(distance)
+                    summed_distances = sum(summed_distances_ind)
+                    print(summed_distances)
 
             x_tail = list(zip(*tail_points))[0]
             y_tail = list(zip(*tail_points))[1]  

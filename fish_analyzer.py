@@ -14,7 +14,7 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video =  "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/20191118_1311_80-2_L_B.avi" #sys.argv[1]
+path_to_video =  "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/videos/20191113_1513_23-2_R_A.avi" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
 path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
