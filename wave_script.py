@@ -8,9 +8,8 @@ import pathlib
 import math
 from matplotlib import pyplot as plt
 
-
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/filtered_20191118_1021_7-2_L_B.csv" #sys.argv[1]
-path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors" #sys.argv[2]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/results/filtered/filtered_20191113_1401_58-2_L_A.csv" #sys.argv[1]
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/results/wave/" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
 expe = final_path.name[:-4]
@@ -33,8 +32,8 @@ df["angle_corr_tail"] = df['tail_points']
 
 
 
-for quadrant in [0]: # [0,1,2,3]
-    for fish_ident in [1]: # [1,2]    
+for quadrant in [1]: # [0,1,2,3]
+    for fish_ident in [2]: # [1,2]    
         frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
         for idx_frame in frames_numbers:
             if idx_frame%100==0: 
@@ -127,7 +126,7 @@ for quadrant in [0]: # [0,1,2,3]
                     
             if summed_distances > standart_distance:
                 while summed_distances > standart_distance:
-                    print(row.name)
+                    #print(row.name)
 
                     for i in range(1, 5):
                         tail_points[i][0] = ((tail_points[i][0])*0.99) 
@@ -137,10 +136,10 @@ for quadrant in [0]: # [0,1,2,3]
                             distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
                             summed_distances_ind.append(distance)
                     summed_distances = sum(summed_distances_ind)
-                    print(summed_distances)
+                    #print(summed_distances)
             else:
                 while summed_distances < standart_distance:
-                    print(row.name)
+                    #print(row.name)
 
                     for i in range(1, 5):
                         tail_points[i][0] = ((tail_points[i][0])*1.01)           
@@ -150,7 +149,7 @@ for quadrant in [0]: # [0,1,2,3]
                             distance = math.hypot(tail_points[idx][0] - tail_points[idx-1][0], tail_points[idx][1] - tail_points[idx-1][1])          
                             summed_distances_ind.append(distance)
                     summed_distances = sum(summed_distances_ind)
-                    print(summed_distances)
+                    #print(summed_distances)
 
             x_tail = list(zip(*tail_points))[0]
             y_tail = list(zip(*tail_points))[1]  
@@ -165,7 +164,7 @@ for quadrant in [0]: # [0,1,2,3]
             #plt.plot(xnew, y_modeled)
             coef = model3.c
             coef_f = [round(x, 5) for x in coef]
-            print(coef_f)
+            #print(coef_f)
             #plt.pause(1)
             #plt.clf()
             

@@ -10,7 +10,7 @@ from scipy import stats
 from scipy.interpolate import interp1d
 import math
 
-df = pd.read_csv("C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/wave_corrected__20191118_1021_7-2_L_B.csv").set_index('frame_number')
+df = pd.read_csv("C:/Users/marcio/Videos/Ian_videos/results/wave/wave_corrected__20191113_1401_58-2_L_A.csv").set_index('frame_number')
 
 #tail_coords
 
@@ -30,7 +30,7 @@ df = pd.read_csv("C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/wave_corre
 #################plt.ion()
 
 
-cap = cv2.VideoCapture('C:/Users/marcio/Videos/Ian_videos/20191114_1023_7-2_R_A.avi')
+cap = cv2.VideoCapture('C:/Users/marcio/Videos/Ian_videos/20191113_1401_58-2_L_A.avi')
 final_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 import ast
 df['fish_head'] = df['fish_head'].apply(ast.literal_eval)
@@ -49,8 +49,8 @@ color = None
 #frame_n = 0
 
 
-for quadrant in [0]: # [0,1,2,3]
-  for fish_ident in [1]: # [1,2]    
+for quadrant in [1]: # [0,1,2,3]
+  for fish_ident in [2]: # [1,2]    
     frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
     print(frames_numbers)
     previous_id = 0
@@ -79,11 +79,11 @@ for quadrant in [0]: # [0,1,2,3]
               previous_id = the_row["sequence"].iloc[0]
               
               
-              for coords in the_row["angle_corr_tail"].iloc[0]:      
+              #for coords in the_row["angle_corr_tail"].iloc[0]:      
               #tail plot
               #cv2.circle(drawn_image, fish_tail_local[c], 2, (0, 0, 255), -1)
                 #cv2.circle(frame, (coords[1], coords[0]), 2, (0, 0, 255), -1)
-                pass
+                #pass
         
 
               

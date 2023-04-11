@@ -8,8 +8,8 @@ import math
 
 
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/wave_results/wave_corrected__20191117_1356_140-3_R_B.csv" # sys.argv[1]
-path_to_save = "C:/Users/marcio/Videos/Ian_videos/wave_results/" # sys.argv[2]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/results/wave/wave_corrected__20191113_1401_58-2_L_A.csv" #sys.argv[1]
+path_to_save = "C:/Users/marcio/Videos/Ian_videos/results/cycle" # sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
 expe = final_path.name[16:][:-4]
@@ -29,9 +29,31 @@ df["ant"] = df["angle_corr_tail"].apply(lambda x: tuple(zip(*x))[1][-3])
 df["pen"] = df["angle_corr_tail"].apply(lambda x: tuple(zip(*x))[1][-2])
 df["ult"] = df["angle_corr_tail"].apply(lambda x: tuple(zip(*x))[1][-1])
 
+
+
+
+
+
 df["cycle"] = np.NAN
+sequnces_list = df.sequence.unique()
+for n in sequnces_list:    
+    the_idxs = df.loc[df["sequence"] == n].index      
+    cycle_number = 1
+    count=0  
+    for i in the_idxs:       
+        df.loc[(df.index == i) & (df["sequence"] == n), "cycle"] = cycle_number
+        count=count+1        
+        if count == 6:
+            cycle_number=cycle_number+1
+            count = 0 
+                
 
 
+
+
+
+'''
+df["cycle"] = np.NAN
 sequnces_list = df["sequence"].unique()
 for p in sequnces_list:
     cycle_number = 1
@@ -39,7 +61,6 @@ for p in sequnces_list:
     the_idxs = df.loc[(df["sequence"] == p)].index
     
     for real_index, nominal_index in enumerate(the_idxs):
-        print(real_index)
                
         current_position = df.loc[(df.index == nominal_index), "ult"].iloc[0]
             
@@ -80,6 +101,9 @@ for p in sequnces_list:
         df.loc[(df.index == nominal_index), "cycle"] = cycle_number    
     
 
+'''
+
+
 
 df['diffs'] = df.groupby(["sequence","cycle"])['ult'].diff()
 
@@ -97,9 +121,8 @@ print(the_firsts.columns)
 
 for i in range(0, len(the_firsts)):
     first_com = the_firsts.iloc[i, 2]    
-    last_com = the_lasts.iloc[i, 2]
-    distance = math.hypot((first_com[0] - last_com[0]), (first_com[1] - last_com[1]))     
-    the_firsts.iloc[i, 24] = distance     
+    last_com = the_lasts.iloc[i, 2]    
+    the_firsts.iloc[i, 24] = math.hypot((first_com[0] - last_com[0]), (first_com[1] - last_com[1]))      
     
     
 temp = the_firsts[["sequence", "cycle", "distance_cycle"]]
@@ -108,3 +131,8 @@ df = df.merge(temp, on=["sequence", "cycle"])
 
 
 df.to_csv(path_to_save + '/wave_cycle_' + expe + ".csv", mode='w', index=True, header=True)
+
+
+
+
+
