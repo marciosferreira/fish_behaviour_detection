@@ -14,7 +14,7 @@ import pandas as pd
 if debug==True:
   import winsound
 
-path_to_video =  "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/videos/20191113_1513_23-2_R_A.avi" #sys.argv[1]
+path_to_video =  "C:/Users/marcio/Videos/Ian_videos/20191115_1338_134-1_R_A.avi" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors/" #sys.argv[2]
 path_to_meta = "C:/Users/marcio/Videos/Ian_videos/MIKK_F0_metadata.csv" # sys.argv[3]
 import os
@@ -1010,7 +1010,7 @@ for idx_frame in range(initial_frame,final_frame,1):   #3000 to 4000
           column='frame_number',
           value=idx_frame)
     
-    filt_s_dataf.to_csv(path_to_save + "/" + expe[:-4] + '.csv', mode='a', index=False, header=False)
+    #filt_s_dataf.to_csv(path_to_save + "/" + expe[:-4] + '.csv', mode='a', index=False, header=False)
    
 
     if debug==True:

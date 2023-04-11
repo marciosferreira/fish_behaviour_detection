@@ -9,7 +9,7 @@ import math
 from matplotlib import pyplot as plt
 
 
-path_to_csv = "C:/Users/marcio/Videos/Ian_videos/filtered_20191113_1302_53-2_L_A.csv" #sys.argv[1]
+path_to_csv = "C:/Users/marcio/Videos/Ian_videos/filtered_20191118_1021_7-2_L_B.csv" #sys.argv[1]
 path_to_save = "C:/Users/marcio/Videos/Ian_videos/croped_Ian/errors" #sys.argv[2]
 
 final_path = pathlib.PurePath(path_to_csv)
@@ -33,8 +33,8 @@ df["angle_corr_tail"] = df['tail_points']
 
 
 
-for quadrant in [0,1,2,3]: # [0,1,2,3]
-    for fish_ident in [1,2]: # [1,2]    
+for quadrant in [0]: # [0,1,2,3]
+    for fish_ident in [1]: # [1,2]    
         frames_numbers = df[(df["quadrant"] == quadrant) & (df["fish_id"] == fish_ident)].index.values   
         for idx_frame in frames_numbers:
             if idx_frame%100==0: 
@@ -115,7 +115,8 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             tail_points_str = row["angle_corr_tail"]
             tail_points = ast.literal_eval(tail_points_str)
             x_tail_to_check = list(zip(*tail_points))[0]
-            if sorted(x_tail_to_check) != x_tail_to_check:
+            x_tail_to_check_int = [int(x)for x in x_tail_to_check]
+            if sorted(x_tail_to_check_int) != x_tail_to_check_int:
                 return
             summed_distances = []
             for idx, _ in enumerate(tail_points):
@@ -155,13 +156,18 @@ for quadrant in [0,1,2,3]: # [0,1,2,3]
             y_tail = list(zip(*tail_points))[1]  
           
             
-            #xnew = np.linspace(x_tail[0], x_tail[-1])            
+            xnew = np.linspace(x_tail[0], x_tail[-1])            
             model3 = np.poly1d(np.polyfit(x_tail, y_tail, 3))            
             y_modeled = tuple(model3(x_tail))
-            x_modeled = tuple(x_tail)
-            #plt.figure(1)         
-            #plt.plot(x_modeled, model3(x_modeled)) 
+            x_modeled = tuple(y_tail)
+            plt.figure(1)         
+            plt.plot(xnew, model3(xnew))
+            #plt.plot(xnew, y_modeled)
+            coef = model3.c
+            coef_f = [round(x, 5) for x in coef]
+            print(coef_f)
             #plt.pause(1)
+            #plt.clf()
             
             
             
